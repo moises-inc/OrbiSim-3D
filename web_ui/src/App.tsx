@@ -54,37 +54,37 @@ export function App() {
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Navigation Bar */}
-      <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-3.5 bg-gradient-to-b from-slate-950/90 via-slate-950/60 to-transparent pointer-events-auto">
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-3 bg-slate-950/80 backdrop-blur-md border-b border-slate-900/60 pointer-events-auto">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Orbit className="w-5 h-5 text-white animate-spin-slow" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <Orbit className="w-4 h-4 text-white animate-spin-slow" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-white tracking-tight">OrbiSim-3D</h1>
+              <h1 className="text-sm font-bold text-white tracking-tight">OrbiSim-3D</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 Proyecto Tennessee
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono">
+            <p className="text-[10px] text-slate-400 font-mono">
               High-Performance N-Body Engine & Symplectic PINNs Surrogate
             </p>
           </div>
         </div>
 
         {/* System Badges */}
-        <div className="hidden md:flex items-center gap-3 text-xs font-mono">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-            <Compass className="w-3.5 h-3.5 text-indigo-400" />
-            <span>C++20 SIMD Core</span>
+        <div className="hidden lg:flex items-center gap-2.5 text-xs font-mono pr-72">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+            <Compass className="w-3 h-3 text-indigo-400" />
+            <span className="text-[11px]">C++20 SIMD Core</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-cyan-400" />
-            <span>JAX/PyTorch HNN</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            <span className="text-[11px]">PyTorch HNN</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Three.js WebGL</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="text-[11px]">Three.js WebGL</span>
           </div>
         </div>
       </header>

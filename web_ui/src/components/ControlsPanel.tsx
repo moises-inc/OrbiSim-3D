@@ -33,6 +33,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   const [selectedBodyId, setSelectedBodyId] = useState<string>(bodies[0]?.id || '');
   const [activeTab, setActiveTab] = useState<'physics' | 'body' | 'metrics'>('physics');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activePreset, setActivePreset] = useState<string>('kepler');
+
+  const handleSelectPreset = (key: string) => {
+    setActivePreset(key);
+    onResetPreset(key);
+  };
 
   const selectedBody = bodies.find((b) => b.id === selectedBodyId) || bodies[0];
 
@@ -60,8 +66,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
 
   return (
     <div
-      className={`absolute top-4 right-4 z-20 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl transition-all duration-300 ${
-        isCollapsed ? 'w-64' : 'w-84 max-h-[92vh]'
+      className={`absolute top-16 right-6 z-20 flex flex-col bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl transition-all duration-300 ${
+        isCollapsed ? 'w-64' : 'w-84 max-h-[85vh]'
       }`}
     >
       {/* Header */}
@@ -153,16 +159,26 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                     System Configuration Preset
                   </label>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {Object.entries(PRESETS).map(([key, preset]) => (
-                      <button
-                        key={key}
-                        onClick={() => onResetPreset(key)}
-                        className="text-left px-2.5 py-1.5 rounded-md bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-slate-200 hover:border-cyan-500/50 transition flex items-center justify-between"
-                      >
-                        <span className="font-medium text-xs">{preset.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{preset.bodies.length} bodies</span>
-                      </button>
-                    ))}
+                    {Object.entries(PRESETS).map(([key, preset]) => {
+                      const isActive = activePreset === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => handleSelectPreset(key)}
+                          className={`text-left px-2.5 py-1.5 rounded-md border transition flex items-center justify-between ${
+                            isActive
+                              ? 'bg-cyan-950/40 border-cyan-400 text-white shadow-sm shadow-cyan-500/10'
+                              : 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 text-slate-200 hover:border-cyan-500/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-cyan-400' : 'bg-slate-600'}`} />
+                            <span className="font-medium text-xs">{preset.name}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">{preset.bodies.length} bodies</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -301,30 +317,30 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                           <span className="text-[10px] text-slate-400 block mb-0.5">vx</span>
                           <input
                             type="number"
-                            step="0.1"
-                            value={selectedBody.velocity.x}
+                            step="0.01"
+                            value={Number(selectedBody.velocity.x.toFixed(4))}
                             onChange={(e) => handleBodyParamChange('vx', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center"
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center text-xs"
                           />
                         </div>
                         <div>
                           <span className="text-[10px] text-slate-400 block mb-0.5">vy</span>
                           <input
                             type="number"
-                            step="0.1"
-                            value={selectedBody.velocity.y}
+                            step="0.01"
+                            value={Number(selectedBody.velocity.y.toFixed(4))}
                             onChange={(e) => handleBodyParamChange('vy', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center"
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center text-xs"
                           />
                         </div>
                         <div>
                           <span className="text-[10px] text-slate-400 block mb-0.5">vz</span>
                           <input
                             type="number"
-                            step="0.1"
-                            value={selectedBody.velocity.z}
+                            step="0.01"
+                            value={Number(selectedBody.velocity.z.toFixed(4))}
                             onChange={(e) => handleBodyParamChange('vz', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center"
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-slate-100 text-center text-xs"
                           />
                         </div>
                       </div>

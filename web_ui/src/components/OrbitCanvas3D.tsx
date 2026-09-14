@@ -299,9 +299,9 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      {/* HUD Overlay Info */}
-      <div className="absolute top-4 left-4 pointer-events-none flex flex-col gap-1 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-lg px-3.5 py-2.5 shadow-xl text-xs font-mono">
-        <div className="flex items-center gap-2 text-slate-300 font-semibold text-sm">
+      {/* HUD Overlay Info - Positioned at bottom-left to avoid collision with top header */}
+      <div className="absolute bottom-6 left-6 pointer-events-none flex flex-col gap-1 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-lg px-4 py-3 shadow-2xl text-xs font-mono">
+        <div className="flex items-center gap-2 text-slate-200 font-semibold text-sm">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span>OrbiSim-3D Engine</span>
         </div>
