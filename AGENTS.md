@@ -22,9 +22,10 @@ El sistema cuenta con el paquete de habilidades de desarrollo de software `agent
   - **Coding Complejo / Core C++20 & JAX:** `nvidia/qwen/qwen3-coder-480b-a35b-instruct` o Gemini 3.8 / 3.6 Pro.
   - **Pruebas TDD & Depuración:** `nvidia/qwen/qwen2.5-coder-32b-instruct`.
   - **Razonamiento Extremo / Arquitectura:** `nvidia/nvidia/nemotron-3-ultra-550b-a55b`.
-* **Subagentes de Auditoría:**
-  - `subagent-code-runtime-auditor`: Audit de rendimiento y latencia.
-  - `subagent-scientific-accuracy-checker`: Validación del hamiltoniano $H(p,q)$ y invariantes físicas.
+* **Subagentes de Auditoría en Tiempo de Ejecución:**
+  - `e2e_browser_visual_qa_tester`: Auditor E2E de UI/UX en navegador real con `playwright-cli` (simulación de clics, visualización 3D WebGL, capturas en `/tmp/` e inspección de consola JS).
+  - `scientific_runtime_accuracy_auditor`: Auditor de rigor físico, conservación de energía $H(p,q)$, momento angular $\vec{L}$ y precisión matemática.
+  - `code_hpc_performance_auditor`: Auditor de latencias en ms, profiling de memoria C++/CUDA, paralelismo OpenMP y pruebas de carga.
 
 ---
 
