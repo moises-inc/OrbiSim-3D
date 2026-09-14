@@ -5,7 +5,7 @@
 
 ## 📌 Contexto & Proyecto
 - **Proyecto:** OrbiSim-3D (`moises-inc/OrbiSim-3D`) — Flagship App #1 de Proyecto Tennessee
-- **Ruta Absoluta de Ejecución:** `/mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/OrbiSim-3D`
+- **Ruta Absoluta de Ejecución:** `/mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D`
 - **Modelos Preferentes (NVIDIA API / Gemini):**
   - **Lógica Compleja / Core C++20 & JAX:** `nvidia/qwen/qwen3-coder-480b-a35b-instruct` (o Gemini 3.8 Pro).
   - **Pruebas TDD & Depuración:** `nvidia/qwen/qwen2.5-coder-32b-instruct`.
