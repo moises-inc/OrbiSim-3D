@@ -26,6 +26,10 @@ export interface SimulationConfig {
   trailLength: number;
   paused: boolean;
   speedMultiplier: number;
+  adaptiveTimeStep: boolean;
+  barycenterReset: boolean;
+  bloomEnabled: boolean;
+  bloomIntensity: number;
 }
 
 export interface PhysicalMetrics {
@@ -38,4 +42,7 @@ export interface PhysicalMetrics {
   angularMomentumMagnitude: number;
   stepCount: number;
   simulatedTime: number;
+  currentAdaptiveDt?: number;
+  minDistance?: number;
 }
+

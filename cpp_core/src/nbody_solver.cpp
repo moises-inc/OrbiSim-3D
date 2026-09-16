@@ -110,6 +110,69 @@ Vec3 NBodySystem::total_linear_momentum() const noexcept {
     return P;
 }
 
+double NBodySystem::compute_min_distance() const noexcept {
+    const std::size_t n = bodies_.size();
+    if (n < 2) return 1e9;
+
+    double min_d2 = std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            const Vec3 dr = bodies_[j].position - bodies_[i].position;
+            const double d2 = dr.norm_sq();
+            if (d2 < min_d2) {
+                min_d2 = d2;
+            }
+        }
+    }
+    return std::sqrt(min_d2);
+}
+
+double NBodySystem::compute_adaptive_dt(double base_dt, double eta) const noexcept {
+    const std::size_t n = bodies_.size();
+    if (n < 2 || base_dt <= 0.0) return base_dt;
+
+    double min_tau = std::numeric_limits<double>::infinity();
+    const double eps_sq = softening_ * softening_;
+
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            const Vec3 dr = bodies_[j].position - bodies_[i].position;
+            const double r = std::sqrt(dr.norm_sq() + eps_sq);
+            const double m_sum = bodies_[i].mass + bodies_[j].mass;
+            if (m_sum > 0.0 && G_ > 0.0) {
+                // Dynamical encounter timescale tau = sqrt(r^3 / (G * (m1 + m2)))
+                const double tau = std::sqrt((r * r * r) / (G_ * m_sum));
+                if (tau < min_tau) {
+                    min_tau = tau;
+                }
+            }
+        }
+    }
+
+    if (std::isinf(min_tau)) return base_dt;
+
+    const double dt_cand = eta * min_tau;
+    return std::clamp(dt_cand, 1e-6, base_dt);
+}
+
+void NBodySystem::reset_barycenter(bool reset_position) noexcept {
+    const double m_tot = total_mass();
+    if (m_tot <= 0.0) return;
+
+    const Vec3 v_cm = center_of_mass_velocity();
+    for (auto& b : bodies_) {
+        b.velocity -= v_cm;
+    }
+
+    if (reset_position) {
+        const Vec3 r_cm = center_of_mass();
+        for (auto& b : bodies_) {
+            b.position -= r_cm;
+        }
+    }
+    acc_cached_ = false;
+}
+
 void NBodySystem::compute_accelerations_inplace(
     std::span<const Vec3> positions, std::span<Vec3> out_acc) const noexcept {
     const std::size_t n = positions.size();
@@ -283,6 +346,25 @@ void NBodySystem::step(double dt, IntegratorType type) {
         step_symplectic_verlet(dt);
     } else {
         step_rk4(dt);
+    }
+}
+
+void NBodySystem::step_adaptive(double dt_target, IntegratorType type, double eta) {
+    if (dt_target <= 0.0) return;
+
+    double t_remaining = dt_target;
+    constexpr int MAX_SUBSTEPS = 32;
+    int substep = 0;
+
+    while (t_remaining > 1e-12 && substep < MAX_SUBSTEPS) {
+        const double dt_step = std::min(t_remaining, compute_adaptive_dt(t_remaining, eta));
+        step(dt_step, type);
+        t_remaining -= dt_step;
+        ++substep;
+    }
+
+    if (t_remaining > 1e-12) {
+        step(t_remaining, type);
     }
 }
 

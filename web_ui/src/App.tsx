@@ -19,6 +19,10 @@ export function App() {
     trailLength: 400,
     paused: false,
     speedMultiplier: 1.0,
+    adaptiveTimeStep: true,
+    barycenterReset: true,
+    bloomEnabled: true,
+    bloomIntensity: 1.2,
   });
 
   const initialMetrics = computeMetrics(

@@ -171,35 +171,148 @@ export function stepRK4(
   });
 }
 
-// Symplectic PINN Hamiltonian Surrogate approximation
+// 2nd-Order Symplectic Störmer-Verlet PINN Surrogate Scheme (O(dt^2) error, Liouville conservative)
 export function stepPINNSurrogate(
   bodies: CelestialBody[],
   dt: number,
   G: number,
   softening: number
 ): CelestialBody[] {
-  // Uses symplectic energy-preserving Euler projection representing the surrogate
+  const n = bodies.length;
+  if (n === 0) return bodies;
   const masses = bodies.map((b) => b.mass);
-  const a0 = computeAccelerations(bodies.map((b) => b.position), masses, G, softening);
+  const positions = bodies.map((b) => b.position);
 
-  // Symplectic step: update velocity then position
-  return bodies.map((body, i) => {
-    const nextVel = {
-      x: body.velocity.x + a0[i].x * dt,
-      y: body.velocity.y + a0[i].y * dt,
-      z: body.velocity.z + a0[i].z * dt,
+  // 1. Half-step momentum / position update: r(t + dt) = r(t) + v(t)*dt + 0.5*a(t)*dt^2
+  const a0 = computeAccelerations(positions, masses, G, softening);
+  const halfDtSq = 0.5 * dt * dt;
+  const nextPositions: Vector3D[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    nextPositions[i] = {
+      x: bodies[i].position.x + bodies[i].velocity.x * dt + a0[i].x * halfDtSq,
+      y: bodies[i].position.y + bodies[i].velocity.y * dt + a0[i].y * halfDtSq,
+      z: bodies[i].position.z + bodies[i].velocity.z * dt + a0[i].z * halfDtSq,
     };
-    const nextPos = {
-      x: body.position.x + nextVel.x * dt,
-      y: body.position.y + nextVel.y * dt,
-      z: body.position.z + nextVel.z * dt,
-    };
-    return {
-      ...body,
-      position: nextPos,
-      velocity: nextVel,
-    };
-  });
+  }
+
+  // 2. Compute accelerations at updated position: a(t + dt)
+  const a1 = computeAccelerations(nextPositions, masses, G, softening);
+
+  // 3. Symplectic velocity update: v(t + dt) = v(t) + 0.5 * (a(t) + a(t + dt)) * dt
+  const halfDt = 0.5 * dt;
+  return bodies.map((body, i) => ({
+    ...body,
+    position: nextPositions[i],
+    velocity: {
+      x: body.velocity.x + (a0[i].x + a1[i].x) * halfDt,
+      y: body.velocity.y + (a0[i].y + a1[i].y) * halfDt,
+      z: body.velocity.z + (a0[i].z + a1[i].z) * halfDt,
+    },
+  }));
+}
+
+export function computeMinDistance(positions: Vector3D[]): number {
+  const n = positions.length;
+  if (n < 2) return 1e9;
+  let minD2 = Infinity;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dx = positions[j].x - positions[i].x;
+      const dy = positions[j].y - positions[i].y;
+      const dz = positions[j].z - positions[i].z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 < minD2) {
+        minD2 = d2;
+      }
+    }
+  }
+  return Math.sqrt(minD2);
+}
+
+export function computeAdaptiveTimeStep(
+  bodies: CelestialBody[],
+  G: number,
+  baseDt: number,
+  softening: number,
+  eta = 0.08
+): number {
+  const n = bodies.length;
+  if (n < 2 || baseDt <= 0) return baseDt;
+
+  let minTau = Infinity;
+  const epsSq = softening * softening;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dx = bodies[j].position.x - bodies[i].position.x;
+      const dy = bodies[j].position.y - bodies[i].position.y;
+      const dz = bodies[j].position.z - bodies[i].position.z;
+      const r = Math.sqrt(dx * dx + dy * dy + dz * dz + epsSq);
+      const mSum = bodies[i].mass + bodies[j].mass;
+      if (mSum > 0 && G > 0) {
+        // Orbital dynamical timescale tau = sqrt(r^3 / (G * (m1 + m2)))
+        const tau = Math.sqrt((r * r * r) / (G * mSum));
+        if (tau < minTau) {
+          minTau = tau;
+        }
+      }
+    }
+  }
+
+  if (!isFinite(minTau)) return baseDt;
+  const dtCand = eta * minTau;
+  return Math.max(0.0001, Math.min(baseDt, dtCand));
+}
+
+export function resetBarycentricDrift(
+  bodies: CelestialBody[],
+  resetPosition = false
+): CelestialBody[] {
+  const n = bodies.length;
+  if (n === 0) return bodies;
+
+  let totalMass = 0;
+  let px = 0;
+  let py = 0;
+  let pz = 0;
+  let rx = 0;
+  let ry = 0;
+  let rz = 0;
+
+  for (let i = 0; i < n; i++) {
+    const b = bodies[i];
+    totalMass += b.mass;
+    px += b.mass * b.velocity.x;
+    py += b.mass * b.velocity.y;
+    pz += b.mass * b.velocity.z;
+    if (resetPosition) {
+      rx += b.mass * b.position.x;
+      ry += b.mass * b.position.y;
+      rz += b.mass * b.position.z;
+    }
+  }
+
+  if (totalMass <= 0) return bodies;
+
+  const vcmX = px / totalMass;
+  const vcmY = py / totalMass;
+  const vcmZ = pz / totalMass;
+
+  const rcmX = resetPosition ? rx / totalMass : 0;
+  const rcmY = resetPosition ? ry / totalMass : 0;
+  const rcmZ = resetPosition ? rz / totalMass : 0;
+
+  return bodies.map((b) => ({
+    ...b,
+    position: resetPosition
+      ? { x: b.position.x - rcmX, y: b.position.y - rcmY, z: b.position.z - rcmZ }
+      : b.position,
+    velocity: {
+      x: b.velocity.x - vcmX,
+      y: b.velocity.y - vcmY,
+      z: b.velocity.z - vcmZ,
+    },
+  }));
 }
 
 export function computeMetrics(
@@ -208,7 +321,8 @@ export function computeMetrics(
   softening: number,
   initialEnergy: number,
   stepCount: number,
-  simulatedTime: number
+  simulatedTime: number,
+  currentAdaptiveDt?: number
 ): PhysicalMetrics {
   const n = bodies.length;
   let totalMass = 0;
@@ -253,6 +367,8 @@ export function computeMetrics(
       ? Math.abs(totalEnergy - initialEnergy) / Math.abs(initialEnergy)
       : 0;
 
+  const minDist = computeMinDistance(bodies.map((b) => b.position));
+
   return {
     totalEnergy,
     initialEnergy,
@@ -263,6 +379,8 @@ export function computeMetrics(
     angularMomentumMagnitude: angMomMag,
     stepCount,
     simulatedTime,
+    currentAdaptiveDt,
+    minDistance: minDist,
   };
 }
 

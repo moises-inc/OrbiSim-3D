@@ -188,3 +188,33 @@ TEST_F(TwoBodyTest, IntegratorInterleavingCacheConsistency) {
     EXPECT_LT(rel_err, 1e-5);
 }
 
+TEST_F(TwoBodyTest, AdaptiveTimeStepEccentricOrbit) {
+    // Eccentric encounter test: compute_adaptive_dt should contract near pericenter
+    const double base_dt = 0.01;
+    const double dt_init = system.compute_adaptive_dt(base_dt, 0.08);
+    EXPECT_GT(dt_init, 0.0);
+    EXPECT_LE(dt_init, base_dt);
+
+    // Integrate with adaptive sub-stepping over multiple steps
+    for (int i = 0; i < 500; ++i) {
+        system.step_adaptive(0.005, IntegratorType::SymplecticVerlet, 0.08);
+    }
+
+    const double min_dist = system.compute_min_distance();
+    EXPECT_GT(min_dist, 5.0); // Orbit remains bound without numerical ejection
+    EXPECT_LT(min_dist, 15.0);
+}
+
+TEST_F(TwoBodyTest, BarycentricResetMomentumConservation) {
+    // Deliberately introduce momentum imbalance
+    system.bodies()[0].velocity.x += 2.0;
+    EXPECT_GT(system.total_linear_momentum().norm(), 100.0);
+
+    // Reset barycenter drift
+    system.reset_barycenter(true);
+
+    EXPECT_NEAR(system.total_linear_momentum().norm(), 0.0, 1e-12);
+    EXPECT_NEAR(system.center_of_mass_velocity().norm(), 0.0, 1e-12);
+    EXPECT_NEAR(system.center_of_mass().norm(), 0.0, 1e-12);
+}
+

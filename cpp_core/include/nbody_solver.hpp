@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <numeric>
 #include <span>
 #include <string>
@@ -128,6 +130,11 @@ public:
     [[nodiscard]] double total_energy() const noexcept;
     [[nodiscard]] Vec3 total_angular_momentum() const noexcept;
     [[nodiscard]] Vec3 total_linear_momentum() const noexcept;
+    [[nodiscard]] double compute_min_distance() const noexcept;
+    [[nodiscard]] double compute_adaptive_dt(double base_dt, double eta = 0.08) const noexcept;
+
+    // Barycentric drift correction (guarantees P = 0 and keeps bodies centered)
+    void reset_barycenter(bool reset_position = false) noexcept;
 
     // Acceleration calculation with OpenMP support
     [[nodiscard]] std::vector<Vec3> compute_accelerations() const;
@@ -139,6 +146,7 @@ public:
     void step_symplectic_verlet(double dt);
     void step_rk4(double dt);
     void step(double dt, IntegratorType type = IntegratorType::SymplecticVerlet);
+    void step_adaptive(double dt_target, IntegratorType type = IntegratorType::SymplecticVerlet, double eta = 0.08);
 
     // Multi-step trajectory integration
     struct TrajectorySnapshot {

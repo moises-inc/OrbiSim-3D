@@ -1,12 +1,21 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { CelestialBody, SimulationConfig, PhysicalMetrics } from '../types';
 import {
   stepSymplecticVerlet,
   stepRK4,
   stepPINNSurrogate,
   computeMetrics,
+  computeAdaptiveTimeStep,
+  resetBarycentricDrift,
 } from '../physics';
+import { createSunPlasmaMaterial, createSunCoronaMesh } from '../visuals/SunShader';
+import { createAtmosphereMesh } from '../visuals/AtmosphereShader';
+import { createCosmicStarfield } from '../visuals/CosmicStarfield';
+import { GlowingTrail } from '../visuals/GlowingTrail';
 
 interface OrbitCanvas3DProps {
   bodies: CelestialBody[];
@@ -60,61 +69,70 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
 
     // 1. Three.js Scene, Camera, Renderer
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x030712); // slate-950
+    scene.background = new THREE.Color(0x020617); // slate-950 deep space
 
     const camera = new THREE.PerspectiveCamera(
       55,
       container.clientWidth / container.clientHeight,
       0.1,
-      1000
+      1500
     );
     camera.position.set(0, -22, 14);
     camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: 'high-performance',
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
     container.appendChild(renderer.domElement);
 
-    // 2. Space Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    // 2. Post-Processing: EffectComposer + UnrealBloomPass
+    const renderScene = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(container.clientWidth, container.clientHeight),
+      configRef.current.bloomIntensity || 1.2,
+      0.45,
+      0.82
+    );
+    bloomPass.threshold = 0.18;
+    bloomPass.strength = configRef.current.bloomIntensity || 1.2;
+    bloomPass.radius = 0.55;
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass);
+
+    // 3. Space Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.PointLight(0xffedd5, 2.5, 300, 0.1);
+    const sunLight = new THREE.PointLight(0xffedd5, 3.0, 500, 0.08);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    // 3. Starfield particles
-    const starCount = 1800;
-    const starGeo = new THREE.BufferGeometry();
-    const starCoords = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount * 3; i += 3) {
-      starCoords[i] = (Math.random() - 0.5) * 350;
-      starCoords[i + 1] = (Math.random() - 0.5) * 350;
-      starCoords[i + 2] = (Math.random() - 0.5) * 350;
-    }
-    starGeo.setAttribute('position', new THREE.BufferAttribute(starCoords, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: 0x94a3b8,
-      size: 0.8,
-      transparent: true,
-      opacity: 0.75,
-    });
-    const starField = new THREE.Points(starGeo, starMat);
-    scene.add(starField);
+    // 4. Cosmic Starfield (5,500+ multi-spectral stars + nebulae dust clouds)
+    const starfield = createCosmicStarfield(5500);
+    scene.add(starfield.starsGroup);
 
-    // 4. Grid helper on ecliptic plane
-    const gridHelper = new THREE.GridHelper(40, 40, 0x1e293b, 0x0f172a);
+    // 5. Grid helper on ecliptic plane
+    const gridHelper = new THREE.GridHelper(50, 50, 0x1e293b, 0x090d16);
     gridHelper.rotation.x = Math.PI / 2;
     scene.add(gridHelper);
 
-    // 5. Body Meshes & Trail Lines Map
+    // 6. Body Meshes, Aux Glow Meshes & Glowing Trails Maps
     const bodyMeshes = new Map<string, THREE.Mesh>();
-    const trailLines = new Map<string, THREE.Line>();
+    const bodyAuxMeshes = new Map<string, THREE.Mesh>();
+    const glowingTrails = new Map<string, GlowingTrail>();
 
-    // 6. Camera Orbit Interaction (Mouse drag / scroll)
+    const clock = new THREE.Clock();
+
+    // 7. Camera Orbit Interaction (Mouse drag / scroll)
     let isDragging = false;
     let isPanning = false;
     let prevMouse = { x: 0, y: 0 };
@@ -162,7 +180,7 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      radius = Math.max(3, Math.min(180, radius + e.deltaY * 0.03));
+      radius = Math.max(3, Math.min(220, radius + e.deltaY * 0.03));
       updateCameraPos();
     };
 
@@ -175,7 +193,7 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
     dom.addEventListener('wheel', onWheel, { passive: false });
     dom.addEventListener('contextmenu', onContextMenu);
 
-    // 7. Animation / Simulation Loop
+    // 8. Animation / Simulation Loop
     let animationFrameId: number;
     let lastUiUpdateTime = 0;
 
@@ -184,11 +202,34 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
 
       const cfg = configRef.current;
       let currentBodies = bodiesRef.current;
+      const elapsedTime = clock.getElapsedTime();
 
-      // Sub-stepping for physics stability
+      // Dynamic starfield twinkling update
+      starfield.update(elapsedTime);
+
+      // Dynamically update bloom intensity
+      bloomPass.strength = cfg.bloomIntensity;
+
+      // Physics Integration Loop with Adaptive Sub-Stepping
       if (!cfg.paused && currentBodies.length > 0) {
-        const subSteps = Math.max(1, Math.round(cfg.speedMultiplier * 4));
-        const dtSub = cfg.timeStep / 4;
+        let dtSub = cfg.timeStep;
+        let subSteps = 1;
+
+        if (cfg.adaptiveTimeStep) {
+          const adaptiveDt = computeAdaptiveTimeStep(
+            currentBodies,
+            cfg.G,
+            0.05,
+            0.0001,
+            cfg.timeStep
+          );
+          // Calculate dynamically bounded sub-steps (1 to 16)
+          subSteps = Math.max(1, Math.min(16, Math.round(cfg.timeStep / adaptiveDt)));
+          dtSub = cfg.timeStep / subSteps;
+        } else {
+          subSteps = Math.max(1, Math.round(cfg.speedMultiplier * 4));
+          dtSub = cfg.timeStep / 4;
+        }
 
         for (let s = 0; s < subSteps; s++) {
           if (cfg.integrator === 'symplectic_verlet') {
@@ -202,7 +243,12 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
           simTimeRef.current += dtSub;
         }
 
-        // Update trails
+        // Center-of-mass barycentric drift stabilization
+        if (cfg.barycenterReset && stepCountRef.current % 12 === 0) {
+          currentBodies = resetBarycentricDrift(currentBodies, false);
+        }
+
+        // Update body trails
         currentBodies = currentBodies.map((b) => {
           const newTrail = [...b.trail, { ...b.position }];
           if (newTrail.length > cfg.trailLength) {
@@ -230,80 +276,117 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
         }
       }
 
-      // Synchronize Three.js objects
+      // Synchronize Three.js 3D Celestial Objects & Shaders
       currentBodies.forEach((b) => {
         let mesh = bodyMeshes.get(b.id);
+        let auxMesh = bodyAuxMeshes.get(b.id);
+
         if (!mesh) {
           const geo = new THREE.SphereGeometry(b.radius, 32, 32);
-          const mat = new THREE.MeshStandardMaterial({
-            color: b.color,
-            emissive: b.emissive ? b.color : 0x000000,
-            emissiveIntensity: b.emissive ? 0.8 : 0.0,
-            roughness: 0.3,
-            metalness: 0.2,
-          });
-          mesh = new THREE.Mesh(geo, mat);
+          if (b.emissive) {
+            // Emissive Solar Star: Custom Simplex Noise Plasma Material
+            const plasmaMat = createSunPlasmaMaterial(b.color);
+            mesh = new THREE.Mesh(geo, plasmaMat);
+            auxMesh = createSunCoronaMesh(b.radius, b.color);
+          } else {
+            // Planet / Satellite: High-fidelity standard material + Rayleigh atmospheric halo
+            const standardMat = new THREE.MeshStandardMaterial({
+              color: b.color,
+              roughness: 0.35,
+              metalness: 0.15,
+            });
+            mesh = new THREE.Mesh(geo, standardMat);
+            auxMesh = createAtmosphereMesh(b.radius, b.color);
+          }
+
           scene.add(mesh);
           bodyMeshes.set(b.id, mesh);
+
+          if (auxMesh) {
+            scene.add(auxMesh);
+            bodyAuxMeshes.set(b.id, auxMesh);
+          }
         }
+
         mesh.position.set(b.position.x, b.position.y, b.position.z);
 
-        // Trail line
-        let line = trailLines.get(b.id);
-        if (!line) {
-          const lineGeo = new THREE.BufferGeometry();
-          const lineMat = new THREE.LineBasicMaterial({
-            color: b.color,
-            transparent: true,
-            opacity: 0.65,
-          });
-          line = new THREE.Line(lineGeo, lineMat);
-          scene.add(line);
-          trailLines.set(b.id, line);
+        if (auxMesh) {
+          auxMesh.position.set(b.position.x, b.position.y, b.position.z);
+          if ('material' in auxMesh && (auxMesh.material as THREE.ShaderMaterial).uniforms?.uTime) {
+            (auxMesh.material as THREE.ShaderMaterial).uniforms.uTime.value = elapsedTime;
+          }
         }
 
-        if (b.trail.length > 1) {
-          const pts = new Float32Array(b.trail.length * 3);
-          b.trail.forEach((pt, idx) => {
-            pts[idx * 3] = pt.x;
-            pts[idx * 3 + 1] = pt.y;
-            pts[idx * 3 + 2] = pt.z;
-          });
-          line.geometry.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-          line.geometry.attributes.position.needsUpdate = true;
-          line.visible = true;
-        } else {
-          line.visible = false;
+        // Update solar plasma time uniform
+        if ('material' in mesh && (mesh.material as THREE.ShaderMaterial).uniforms?.uTime) {
+          (mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = elapsedTime;
         }
+
+        // Glowing orbital trajectory trail with vertex-alpha gradient
+        let trail = glowingTrails.get(b.id);
+        if (!trail) {
+          trail = new GlowingTrail(b.color);
+          scene.add(trail.line);
+          glowingTrails.set(b.id, trail);
+        }
+        trail.update(b.trail);
       });
 
-      // Remove defunct bodies
+      // Remove defunct bodies and auxiliary meshes
       for (const [id, mesh] of bodyMeshes.entries()) {
         if (!currentBodies.some((b) => b.id === id)) {
           scene.remove(mesh);
           mesh.geometry.dispose();
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose());
+          } else {
+            mesh.material.dispose();
+          }
           bodyMeshes.delete(id);
         }
       }
-      for (const [id, line] of trailLines.entries()) {
+
+      for (const [id, aux] of bodyAuxMeshes.entries()) {
         if (!currentBodies.some((b) => b.id === id)) {
-          scene.remove(line);
-          line.geometry.dispose();
-          trailLines.delete(id);
+          scene.remove(aux);
+          aux.geometry.dispose();
+          if (Array.isArray(aux.material)) {
+            aux.material.forEach((m) => m.dispose());
+          } else {
+            aux.material.dispose();
+          }
+          bodyAuxMeshes.delete(id);
         }
       }
 
-      renderer.render(scene, camera);
+      for (const [id, trail] of glowingTrails.entries()) {
+        if (!currentBodies.some((b) => b.id === id)) {
+          scene.remove(trail.line);
+          trail.dispose();
+          glowingTrails.delete(id);
+        }
+      }
+
+      // Render via Post-Processing UnrealBloomPass or standard renderer
+      if (cfg.bloomEnabled) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
     };
 
     animate();
 
-    // 8. Handle Window Resize
+    // 9. Handle Window Resize
     const handleResize = () => {
       if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(width, height);
+      composer.setSize(width, height);
+      bloomPass.resolution.set(width, height);
     };
     window.addEventListener('resize', handleResize);
 
@@ -317,6 +400,10 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
       dom.removeEventListener('contextmenu', onContextMenu);
 
       // Cleanly dispose all Three.js WebGL GPU resources and geometries
+      starfield.dispose();
+      composer.dispose();
+      glowingTrails.forEach((t) => t.dispose());
+      glowingTrails.clear();
       disposeHierarchy(scene);
       renderer.dispose();
       renderer.forceContextLoss();
@@ -330,20 +417,59 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
-      {/* HUD Overlay Info - Positioned at bottom-left to avoid collision with top header */}
-      <div className="absolute bottom-6 left-6 pointer-events-none flex flex-col gap-1 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-lg px-4 py-3 shadow-2xl text-xs font-mono">
-        <div className="flex items-center gap-2 text-slate-200 font-semibold text-sm">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>OrbiSim-3D Engine</span>
+      {/* HUD Overlay Info - Bottom-left glassmorphism telemetry panel */}
+      <div className="absolute bottom-6 left-6 pointer-events-none flex flex-col gap-1.5 bg-slate-950/85 backdrop-blur-xl border border-slate-800/80 rounded-xl px-4 py-3 shadow-2xl text-xs font-mono">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-slate-100 font-semibold text-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 animate-pulse" />
+            <span>OrbiSim-3D Photoreal Engine</span>
+          </div>
+          <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-cyan-300 font-semibold border border-cyan-500/30">
+            WebGL 3D
+          </span>
         </div>
-        <div className="text-slate-400 mt-1">
-          Active Integrator: <span className="text-cyan-400 font-medium">{config.integrator}</span>
+
+        <div className="flex items-center gap-4 text-slate-300 mt-1">
+          <div>
+            Integrator: <span className="text-cyan-400 font-medium">{config.integrator}</span>
+          </div>
+          <div>
+            Bodies: <span className="text-white font-medium">{bodies.length}</span>
+          </div>
         </div>
-        <div className="text-slate-400">
-          Bodies Count: <span className="text-white font-medium">{bodies.length}</span>
+
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80 text-[11px]">
+          <span
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+              config.adaptiveTimeStep
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            Adaptive Δt: {config.adaptiveTimeStep ? 'ON' : 'OFF'}
+          </span>
+          <span
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+              config.barycenterReset
+                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            Barycentric Lock: {config.barycenterReset ? 'LOCKED' : 'OFF'}
+          </span>
+          <span
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+              config.bloomEnabled
+                ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            HDR Bloom: {config.bloomEnabled ? 'ON' : 'OFF'}
+          </span>
         </div>
+
         <div className="text-slate-500 text-[10px] mt-0.5">
-          Rotate: Left-Click + Drag | Pan: Right-Click | Zoom: Scroll
+          Left-Click: Orbit | Right-Click: Pan | Scroll: Zoom
         </div>
       </div>
     </div>
