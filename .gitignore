@@ -25,11 +25,6 @@ compile_commands.json
 *.h5
 *.pt
 *.onnx
-.env
-.env.*
-*PROMPT*
-*prompt*
-
 # Node / Web
 node_modules/
 dist/
