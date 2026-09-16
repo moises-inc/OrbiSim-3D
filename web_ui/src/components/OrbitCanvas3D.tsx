@@ -16,6 +16,27 @@ interface OrbitCanvas3DProps {
   initialEnergyRef: React.MutableRefObject<number>;
 }
 
+/**
+ * Recursively disposes geometries and materials from Three.js scene hierarchy
+ * preventing GPU WebGL context leaks when mounting/unmounting components.
+ */
+function disposeHierarchy(node: THREE.Object3D) {
+  for (let i = node.children.length - 1; i >= 0; i--) {
+    disposeHierarchy(node.children[i]);
+  }
+  if ('geometry' in node && (node as THREE.Mesh).geometry) {
+    ((node as THREE.Mesh).geometry as THREE.BufferGeometry).dispose();
+  }
+  if ('material' in node && (node as THREE.Mesh).material) {
+    const mat = (node as THREE.Mesh).material as THREE.Material | THREE.Material[];
+    if (Array.isArray(mat)) {
+      mat.forEach((m) => m.dispose());
+    } else {
+      mat.dispose();
+    }
+  }
+}
+
 export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
   bodies,
   setBodies,
@@ -156,6 +177,7 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
 
     // 7. Animation / Simulation Loop
     let animationFrameId: number;
+    let lastUiUpdateTime = 0;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -190,18 +212,22 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
         });
 
         bodiesRef.current = currentBodies;
-        setBodies(currentBodies);
 
-        // Update metrics
-        const metrics = computeMetrics(
-          currentBodies,
-          cfg.G,
-          cfg.softening,
-          initialEnergyRef.current,
-          stepCountRef.current,
-          simTimeRef.current
-        );
-        setMetrics(metrics);
+        // Throttled UI state synchronization (~15 FPS) to eliminate React re-render thrashing at 60 FPS
+        const now = performance.now();
+        if (now - lastUiUpdateTime >= 66) {
+          lastUiUpdateTime = now;
+          setBodies(currentBodies);
+          const metrics = computeMetrics(
+            currentBodies,
+            cfg.G,
+            cfg.softening,
+            initialEnergyRef.current,
+            stepCountRef.current,
+            simTimeRef.current
+          );
+          setMetrics(metrics);
+        }
       }
 
       // Synchronize Three.js objects
@@ -289,10 +315,15 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
       window.removeEventListener('mouseup', onMouseUp);
       dom.removeEventListener('wheel', onWheel);
       dom.removeEventListener('contextmenu', onContextMenu);
+
+      // Cleanly dispose all Three.js WebGL GPU resources and geometries
+      disposeHierarchy(scene);
+      renderer.dispose();
+      renderer.forceContextLoss();
+
       if (container.contains(dom)) {
         container.removeChild(dom);
       }
-      renderer.dispose();
     };
   }, []);
 

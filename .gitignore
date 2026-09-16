@@ -32,3 +32,4 @@ dist-ssr/
 *.local
 .DS_Store
 *.tsbuildinfo
+.playwright-cli/

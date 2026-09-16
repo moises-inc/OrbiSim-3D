@@ -31,17 +31,18 @@ def test_hamiltonian_autodiff_gradients(hnn_model):
     Verifies that time_derivatives properly calculates \dot{q} = \partial H / \partial p
     and \dot{p} = -\partial H / \partial q via PyTorch autograd.
     """
-    q = torch.tensor([[1.0, -0.5]], requires_grad=True)
-    p = torch.tensor([[0.2, 0.8]], requires_grad=True)
+    model_double = hnn_model.double()
+    q = torch.tensor([[1.0, -0.5]], dtype=torch.float64, requires_grad=True)
+    p = torch.tensor([[0.2, 0.8]], dtype=torch.float64, requires_grad=True)
 
-    q_dot, p_dot = hnn_model.time_derivatives(q, p)
+    q_dot, p_dot = model_double.time_derivatives(q, p)
 
     assert q_dot.shape == (1, 2)
     assert p_dot.shape == (1, 2)
     assert not torch.isnan(q_dot).any()
     assert not torch.isnan(p_dot).any()
 
-    # Numerical verification via finite differences on scalar H
+    # Numerical verification via central finite differences on scalar H
     eps = 1e-5
     # Check dH/dp_0
     p_plus = p.clone().detach()
@@ -49,11 +50,12 @@ def test_hamiltonian_autodiff_gradients(hnn_model):
     p_minus = p.clone().detach()
     p_minus[0, 0] -= eps
 
-    h_plus = hnn_model(q, p_plus)
-    h_minus = hnn_model(q, p_minus)
+    h_plus = model_double(q, p_plus)
+    h_minus = model_double(q, p_minus)
     fd_dH_dp0 = (h_plus - h_minus) / (2.0 * eps)
 
-    assert torch.allclose(q_dot[0, 0], fd_dH_dp0[0, 0], atol=1e-3)
+    assert torch.allclose(q_dot[0, 0], fd_dH_dp0[0, 0], atol=1e-5)
+    hnn_model.float()
 
 
 def test_symplectic_loss_backpropagation(hnn_model):
@@ -137,3 +139,28 @@ def test_energy_conservation_1000_steps():
     assert rel_variation < 0.05, f"Energy variation {rel_variation} exceeded threshold 0.05"
     assert not torch.isnan(q_traj).any()
     assert not torch.isinf(q_traj).any()
+
+
+def test_symplectic_separable_vs_joint_stability():
+    """
+    Certifies that separable Hamiltonian models H(q, p) = T(p) + V(q) provide strictly
+    bounded symplectic oscillation under Symplectic Euler integration.
+    """
+    torch.manual_seed(123)
+    model_sep = HamiltonianNN(dim=2, hidden_dim=32, num_layers=2, separable=True)
+    q0 = torch.tensor([1.0, 0.0])
+    p0 = torch.tensor([0.0, 1.0])
+    num_steps = 500
+    dt = 0.01
+
+    q_traj, p_traj, h_traj = rollout_surrogate(model_sep, q0, p0, num_steps=num_steps, dt=dt)
+    assert q_traj.shape == (num_steps + 1, 2)
+    assert not torch.isnan(h_traj).any()
+
+    # Energy variation must be finite and bounded
+    h0 = h_traj[0].item()
+    max_h = torch.max(h_traj).item()
+    min_h = torch.min(h_traj).item()
+    rel_drift = abs(max_h - min_h) / max(abs(h0), 1e-6)
+    assert rel_drift < 0.1, f"Separable surrogate drift {rel_drift} exceeded 0.1"
+

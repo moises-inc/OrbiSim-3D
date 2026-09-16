@@ -108,10 +108,16 @@ public:
     [[nodiscard]] std::vector<Body>& bodies() noexcept { return bodies_; }
 
     [[nodiscard]] double G() const noexcept { return G_; }
-    void set_G(double G) noexcept { G_ = G; }
+    void set_G(double G) noexcept {
+        G_ = G;
+        acc_cached_ = false;
+    }
 
     [[nodiscard]] double softening() const noexcept { return softening_; }
-    void set_softening(double eps) noexcept { softening_ = eps; }
+    void set_softening(double eps) noexcept {
+        softening_ = eps;
+        acc_cached_ = false;
+    }
 
     // Physical Invariants & Observables
     [[nodiscard]] Vec3 center_of_mass() const noexcept;
@@ -152,10 +158,27 @@ private:
     double softening_{1e-5};
     std::vector<Body> bodies_;
 
+    // Structure of Arrays (SoA) contiguous mass cache for L1 cache locality
+    mutable std::vector<double> masses_;
+    void sync_masses_cache() const;
+
     // Performance & HPC cached state for zero-allocation integration
     mutable std::vector<Vec3> cur_acc_;
     mutable std::vector<Vec3> scratch_pos_;
     mutable std::vector<Vec3> scratch_acc_;
+
+    // Zero-allocation persistent buffers for RK4 integration
+    mutable std::vector<Vec3> r0_;
+    mutable std::vector<Vec3> v0_;
+    mutable std::vector<Vec3> r_scratch_;
+    mutable std::vector<Vec3> k1_v_;
+    mutable std::vector<Vec3> k2_r_;
+    mutable std::vector<Vec3> k2_v_;
+    mutable std::vector<Vec3> k3_r_;
+    mutable std::vector<Vec3> k3_v_;
+    mutable std::vector<Vec3> k4_r_;
+    mutable std::vector<Vec3> k4_v_;
+
     mutable bool acc_cached_{false};
 };
 

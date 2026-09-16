@@ -13,7 +13,7 @@ add_library(orbisim_core STATIC
     src/nbody_solver.cpp
 )
 
-target_compile_options(orbisim_core PRIVATE
+target_compile_options(orbisim_core PUBLIC
     $<$<CXX_COMPILER_ID:GNU,Clang>:
         -O3
         -march=native

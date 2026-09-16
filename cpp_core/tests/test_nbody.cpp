@@ -25,16 +25,17 @@ class ThreeBodyTest : public ::testing::Test {
 protected:
     void SetUp() override {
         system = NBodySystem(1.0, 1e-5);
-        // Equilateral triangle configuration with equal masses
+        // Equilateral triangle configuration with equal masses in exact circular equilibrium
         const double r = 5.0;
         const double m = 10.0;
+        const double v_circ = std::sqrt((1.0 * m) / (std::sqrt(3.0) * r)); // ~1.07457
         const double theta1 = 0.0;
         const double theta2 = 2.0 * std::numbers::pi / 3.0;
         const double theta3 = 4.0 * std::numbers::pi / 3.0;
 
-        system.add_body(Body{"Body1", m, {r * std::cos(theta1), r * std::sin(theta1), 0.0}, {-0.5 * std::sin(theta1), 0.5 * std::cos(theta1), 0.0}});
-        system.add_body(Body{"Body2", m, {r * std::cos(theta2), r * std::sin(theta2), 0.0}, {-0.5 * std::sin(theta2), 0.5 * std::cos(theta2), 0.0}});
-        system.add_body(Body{"Body3", m, {r * std::cos(theta3), r * std::sin(theta3), 0.0}, {-0.5 * std::sin(theta3), 0.5 * std::cos(theta3), 0.0}});
+        system.add_body(Body{"Body1", m, {r * std::cos(theta1), r * std::sin(theta1), 0.0}, {-v_circ * std::sin(theta1), v_circ * std::cos(theta1), 0.0}});
+        system.add_body(Body{"Body2", m, {r * std::cos(theta2), r * std::sin(theta2), 0.0}, {-v_circ * std::sin(theta2), v_circ * std::cos(theta2), 0.0}});
+        system.add_body(Body{"Body3", m, {r * std::cos(theta3), r * std::sin(theta3), 0.0}, {-v_circ * std::sin(theta3), v_circ * std::cos(theta3), 0.0}});
     }
 
     NBodySystem system;
@@ -153,3 +154,37 @@ TEST_F(TwoBodyTest, TrajectorySimulationSnapshotIntegrity) {
     EXPECT_NEAR(snapshots.front().time, 0.0, 1e-9);
     EXPECT_NEAR(snapshots.back().time, 2.0, 0.02);
 }
+
+TEST_F(TwoBodyTest, ZeroSofteningNoNan) {
+    // Pure Newtonian interaction with zero softening must not produce NaN in self-interaction
+    system.set_softening(0.0);
+    const double dt = 0.001;
+
+    for (int i = 0; i < 100; ++i) {
+        system.step_symplectic_verlet(dt);
+    }
+
+    for (const auto& b : system.bodies()) {
+        EXPECT_FALSE(std::isnan(b.position.x));
+        EXPECT_FALSE(std::isnan(b.position.y));
+        EXPECT_FALSE(std::isnan(b.position.z));
+        EXPECT_FALSE(std::isnan(b.velocity.x));
+        EXPECT_FALSE(std::isnan(b.velocity.y));
+        EXPECT_FALSE(std::isnan(b.velocity.z));
+    }
+}
+
+TEST_F(TwoBodyTest, IntegratorInterleavingCacheConsistency) {
+    // Interleaving Verlet and RK4 must cleanly invalidate cached accelerations
+    const double e0 = system.total_energy();
+    const double dt = 0.001;
+
+    system.step_symplectic_verlet(dt);
+    system.step_rk4(dt);
+    system.step_symplectic_verlet(dt);
+
+    const double e_final = system.total_energy();
+    const double rel_err = std::abs(e_final - e0) / std::abs(e0);
+    EXPECT_LT(rel_err, 1e-5);
+}
+

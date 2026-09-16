@@ -26,7 +26,7 @@ class HamiltonianNN(nn.Module):
         hidden_dim: int = 128,
         num_layers: int = 3,
         activation: str = "tanh",
-        separable: bool = False,
+        separable: bool = True,
     ):
         """
         Args:
@@ -34,7 +34,8 @@ class HamiltonianNN(nn.Module):
             hidden_dim: Number of neurons per hidden layer.
             num_layers: Number of hidden layers.
             activation: Activation function ('tanh' or 'silu').
-            separable: If True, models H(q, p) = T(p) + V(q) separately.
+            separable: If True, models H(q, p) = T(p) + V(q) separately, ensuring exact
+                       Liouville phase-space volume preservation under Symplectic Euler (det(J) = 1).
         """
         super().__init__()
         self.dim = dim

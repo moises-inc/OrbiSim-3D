@@ -100,7 +100,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
         </button>
 
         <button
-          onClick={() => onResetPreset('kepler')}
+          onClick={() => onResetPreset(activePreset)}
           className="flex items-center gap-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 transition"
           title="Reset Simulation"
         >

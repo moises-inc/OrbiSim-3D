@@ -13,13 +13,25 @@ namespace orbisim {
 NBodySystem::NBodySystem(double G, double softening)
     : G_(G), softening_(softening) {}
 
+void NBodySystem::sync_masses_cache() const {
+    const std::size_t n = bodies_.size();
+    if (masses_.size() != n) {
+        masses_.resize(n);
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        masses_[i] = bodies_[i].mass;
+    }
+}
+
 void NBodySystem::add_body(const Body& body) {
     bodies_.push_back(body);
+    masses_.push_back(body.mass);
     acc_cached_ = false;
 }
 
 void NBodySystem::clear() {
     bodies_.clear();
+    masses_.clear();
     acc_cached_ = false;
 }
 
@@ -104,6 +116,9 @@ void NBodySystem::compute_accelerations_inplace(
     const double eps_sq = softening_ * softening_;
     const double G = G_;
 
+    sync_masses_cache();
+    const double* const mass_data = masses_.data();
+
     #pragma omp parallel for schedule(static) if(n >= 128)
     for (long long i = 0; i < static_cast<long long>(n); ++i) {
         double ax = 0.0;
@@ -113,19 +128,35 @@ void NBodySystem::compute_accelerations_inplace(
         const double py = positions[i].y;
         const double pz = positions[i].z;
 
-        // Branchless SIMD inner loop: self-interaction gives dx=dy=dz=0, producing exactly 0 force
-        #pragma omp simd reduction(+:ax, ay, az)
-        for (std::size_t j = 0; j < n; ++j) {
-            const double dx = positions[j].x - px;
-            const double dy = positions[j].y - py;
-            const double dz = positions[j].z - pz;
-            const double r2 = dx * dx + dy * dy + dz * dz + eps_sq;
-            const double inv_r = 1.0 / std::sqrt(r2);
-            const double inv_r3 = inv_r * inv_r * inv_r;
-            const double factor = G * bodies_[j].mass * inv_r3;
-            ax += dx * factor;
-            ay += dy * factor;
-            az += dz * factor;
+        if (eps_sq == 0.0) {
+            for (std::size_t j = 0; j < n; ++j) {
+                if (static_cast<long long>(j) == i) continue;
+                const double dx = positions[j].x - px;
+                const double dy = positions[j].y - py;
+                const double dz = positions[j].z - pz;
+                const double r2 = dx * dx + dy * dy + dz * dz;
+                const double inv_r = 1.0 / std::sqrt(r2);
+                const double inv_r3 = inv_r * inv_r * inv_r;
+                const double factor = G * mass_data[j] * inv_r3;
+                ax += dx * factor;
+                ay += dy * factor;
+                az += dz * factor;
+            }
+        } else {
+            // Branchless SIMD inner loop: self-interaction gives dx=dy=dz=0, producing exactly 0 force
+            #pragma omp simd reduction(+:ax, ay, az)
+            for (std::size_t j = 0; j < n; ++j) {
+                const double dx = positions[j].x - px;
+                const double dy = positions[j].y - py;
+                const double dz = positions[j].z - pz;
+                const double r2 = dx * dx + dy * dy + dz * dz + eps_sq;
+                const double inv_r = 1.0 / std::sqrt(r2);
+                const double inv_r3 = inv_r * inv_r * inv_r;
+                const double factor = G * mass_data[j] * inv_r3;
+                ax += dx * factor;
+                ay += dy * factor;
+                az += dz * factor;
+            }
         }
 
         out_acc[i] = Vec3{ax, ay, az};
@@ -191,53 +222,59 @@ void NBodySystem::step_rk4(double dt) {
     const std::size_t n = bodies_.size();
     if (n == 0) return;
 
-    // Store state: r0, v0
-    std::vector<Vec3> r0(n);
-    std::vector<Vec3> v0(n);
-    for (std::size_t i = 0; i < n; ++i) {
-        r0[i] = bodies_[i].position;
-        v0[i] = bodies_[i].velocity;
+    // Invalidate Verlet cached acceleration because RK4 modifies positions and velocities
+    acc_cached_ = false;
+
+    // Ensure zero-allocation persistent scratch buffers are sized
+    if (r0_.size() != n) {
+        r0_.resize(n);
+        v0_.resize(n);
+        r_scratch_.resize(n);
+        k1_v_.resize(n);
+        k2_r_.resize(n);
+        k2_v_.resize(n);
+        k3_r_.resize(n);
+        k3_v_.resize(n);
+        k4_r_.resize(n);
+        k4_v_.resize(n);
     }
 
-    // k1
-    const auto k1_v = compute_accelerations(r0);
-    const auto& k1_r = v0;
-
-    // k2
-    std::vector<Vec3> r_k2(n);
-    std::vector<Vec3> v_k2(n);
     for (std::size_t i = 0; i < n; ++i) {
-        r_k2[i] = r0[i] + k1_r[i] * (0.5 * dt);
-        v_k2[i] = v0[i] + k1_v[i] * (0.5 * dt);
+        r0_[i] = bodies_[i].position;
+        v0_[i] = bodies_[i].velocity;
     }
-    const auto k2_v = compute_accelerations(r_k2);
-    const auto& k2_r = v_k2;
 
-    // k3
-    std::vector<Vec3> r_k3(n);
-    std::vector<Vec3> v_k3(n);
+    // k1: a(r0) and v0
+    compute_accelerations_inplace(r0_, k1_v_);
+
+    // k2: r_k2 = r0 + 0.5 * dt * v0, v_k2 = v0 + 0.5 * dt * k1_v
+    const double half_dt = 0.5 * dt;
     for (std::size_t i = 0; i < n; ++i) {
-        r_k3[i] = r0[i] + k2_r[i] * (0.5 * dt);
-        v_k3[i] = v0[i] + k2_v[i] * (0.5 * dt);
+        r_scratch_[i] = r0_[i] + v0_[i] * half_dt;
+        k2_r_[i] = v0_[i] + k1_v_[i] * half_dt;
     }
-    const auto k3_v = compute_accelerations(r_k3);
-    const auto& k3_r = v_k3;
+    compute_accelerations_inplace(r_scratch_, k2_v_);
 
-    // k4
-    std::vector<Vec3> r_k4(n);
-    std::vector<Vec3> v_k4(n);
+    // k3: r_k3 = r0 + 0.5 * dt * k2_r, v_k3 = v0 + 0.5 * dt * k2_v
     for (std::size_t i = 0; i < n; ++i) {
-        r_k4[i] = r0[i] + k3_r[i] * dt;
-        v_k4[i] = v0[i] + k3_v[i] * dt;
+        r_scratch_[i] = r0_[i] + k2_r_[i] * half_dt;
+        k3_r_[i] = v0_[i] + k2_v_[i] * half_dt;
     }
-    const auto k4_v = compute_accelerations(r_k4);
-    const auto& k4_r = v_k4;
+    compute_accelerations_inplace(r_scratch_, k3_v_);
 
-    // Final RK4 combination: r = r0 + (dt/6)*(k1 + 2*k2 + 2*k3 + k4)
+    // k4: r_k4 = r0 + dt * k3_r, v_k4 = v0 + dt * k3_v
+    for (std::size_t i = 0; i < n; ++i) {
+        r_scratch_[i] = r0_[i] + k3_r_[i] * dt;
+        k4_r_[i] = v0_[i] + k3_v_[i] * dt;
+    }
+    compute_accelerations_inplace(r_scratch_, k4_v_);
+
+    // Final RK4 combination: r = r0 + (dt/6)*(v0 + 2*k2_r + 2*k3_r + k4_r)
+    //                       v = v0 + (dt/6)*(k1_v + 2*k2_v + 2*k3_v + k4_v)
     const double sixth_dt = dt / 6.0;
     for (std::size_t i = 0; i < n; ++i) {
-        bodies_[i].position = r0[i] + (k1_r[i] + 2.0 * k2_r[i] + 2.0 * k3_r[i] + k4_r[i]) * sixth_dt;
-        bodies_[i].velocity = v0[i] + (k1_v[i] + 2.0 * k2_v[i] + 2.0 * k3_v[i] + k4_v[i]) * sixth_dt;
+        bodies_[i].position = r0_[i] + (v0_[i] + 2.0 * k2_r_[i] + 2.0 * k3_r_[i] + k4_r_[i]) * sixth_dt;
+        bodies_[i].velocity = v0_[i] + (k1_v_[i] + 2.0 * k2_v_[i] + 2.0 * k3_v_[i] + k4_v_[i]) * sixth_dt;
     }
 }
 
