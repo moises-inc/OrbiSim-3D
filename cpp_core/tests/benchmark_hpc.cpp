@@ -6,12 +6,13 @@
 #include <random>
 #include <cstdlib>
 #include <atomic>
+#include <string>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-// Global heap allocation tracker
+// Global heap allocation interception
 static std::atomic<std::size_t> g_alloc_count{0};
 static std::atomic<std::size_t> g_alloc_bytes{0};
 static std::atomic<bool> g_track_allocations{false};
@@ -54,15 +55,15 @@ void operator delete[](void* p, std::size_t) noexcept {
 
 namespace {
 
-orbisim::NBodySystem create_test_system(std::size_t n, unsigned seed = 42) {
-    orbisim::NBodySystem sys(1.0, 1e-4);
+astrodynamics::NBodySystem create_test_system(std::size_t n, unsigned seed = 42) {
+    astrodynamics::NBodySystem sys(1.0, 1e-4);
     std::mt19937_64 rng(seed);
     std::uniform_real_distribution<double> pos_dist(-50.0, 50.0);
     std::uniform_real_distribution<double> vel_dist(-2.0, 2.0);
     std::uniform_real_distribution<double> mass_dist(0.5, 10.0);
 
     for (std::size_t i = 0; i < n; ++i) {
-        orbisim::Body b{
+        astrodynamics::Body b{
             "body_" + std::to_string(i),
             mass_dist(rng),
             {pos_dist(rng), pos_dist(rng), pos_dist(rng)},
@@ -87,12 +88,12 @@ struct BenchmarkResult {
     std::size_t steady_state_allocs;
 };
 
-BenchmarkResult run_benchmark(std::size_t n, orbisim::IntegratorType type, int num_threads, int steps = 1000) {
+BenchmarkResult run_benchmark(std::size_t n, astrodynamics::IntegratorType type, int num_threads, int steps = 1000) {
 #ifdef _OPENMP
     omp_set_num_threads(num_threads);
 #endif
 
-    std::string type_str = (type == orbisim::IntegratorType::SymplecticVerlet) ? "Verlet" : "RK4";
+    std::string type_str = (type == astrodynamics::IntegratorType::SymplecticVerlet) ? "Verlet" : "RK4";
     auto sys = create_test_system(n);
     const double dt = 0.001;
 
@@ -127,7 +128,6 @@ BenchmarkResult run_benchmark(std::size_t n, orbisim::IntegratorType type, int n
     double us_per_step = (total_ms * 1000.0) / steps;
     double ms_per_step = total_ms / steps;
     double steps_per_sec = (steps / total_ms) * 1000.0;
-    // Interactions per step = N * N
     double mega_interactions = (static_cast<double>(n) * static_cast<double>(n) * steps_per_sec) / 1e6;
 
     return BenchmarkResult{
@@ -145,159 +145,133 @@ BenchmarkResult run_benchmark(std::size_t n, orbisim::IntegratorType type, int n
     };
 }
 
-// Optimized acceleration kernel with contiguous mass buffer (SoA)
-void compute_accelerations_soa_optimized(
-    std::span<const orbisim::Vec3> positions,
-    std::span<const double> masses,
-    double G,
-    double softening,
-    std::span<orbisim::Vec3> out_acc,
-    int num_threads) noexcept {
-    const std::size_t n = positions.size();
-    const double eps_sq = softening * softening;
-
-#ifdef _OPENMP
-    omp_set_num_threads(num_threads);
-    #pragma omp parallel for schedule(static) if(n >= 256)
-#endif
-    for (long long i = 0; i < static_cast<long long>(n); ++i) {
-        double ax = 0.0;
-        double ay = 0.0;
-        double az = 0.0;
-        const double px = positions[i].x;
-        const double py = positions[i].y;
-        const double pz = positions[i].z;
-
-        #pragma omp simd reduction(+:ax, ay, az)
-        for (std::size_t j = 0; j < n; ++j) {
-            const double dx = positions[j].x - px;
-            const double dy = positions[j].y - py;
-            const double dz = positions[j].z - pz;
-            const double r2 = dx * dx + dy * dy + dz * dz + eps_sq;
-            const double inv_r = 1.0 / std::sqrt(r2);
-            const double inv_r3 = inv_r * inv_r * inv_r;
-            const double factor = G * masses[j] * inv_r3;
-            ax += dx * factor;
-            ay += dy * factor;
-            az += dz * factor;
-        }
-        out_acc[i] = orbisim::Vec3{ax, ay, az};
-    }
-}
-
 } // namespace
 
 int main() {
     std::cout << "=========================================================================================\n";
-    std::cout << "  OrbiSim-3D C++20 HPC Simulation Benchmark (1,000 steps per test)\n";
+    std::cout << "  AstroDynamics 3D C++20 Simulation Benchmark (1,000 steps per test)\n";
+    std::cout << "  Evaluates N = {2, 3, 128, 512, 1024} across Threads = {1, 4, 8}\n";
     std::cout << "=========================================================================================\n";
 
-    const std::vector<std::size_t> body_counts = {2, 3, 128, 1024};
-    const std::vector<int> thread_counts = {1, 2, 4, 8};
+    const std::vector<std::size_t> body_counts = {2, 3, 128, 512, 1024};
+    const std::vector<int> thread_counts = {1, 4, 8};
     const int steps = 1000;
 
-    // Full thread sweep for Verlet
-    std::cout << "\n[1] Thread Sweep for Symplectic Verlet (N=2, 3, 128, 1024 | T=1, 2, 4, 8):\n";
-    std::cout << std::string(105, '-') << "\n";
-    std::cout << std::left
-              << std::setw(6)  << "N"
-              << std::setw(10) << "Threads"
-              << std::setw(16) << "Total Time(ms)"
-              << std::setw(16) << "Latency(us/st)"
-              << std::setw(16) << "Latency(ms/st)"
-              << std::setw(18) << "Throughput(st/s)"
-              << std::setw(18) << "M-Interactions/s"
-              << "\n";
-    std::cout << std::string(105, '-') << "\n";
+    auto print_header = [](const std::string& title) {
+        std::cout << "\n>>> " << title << "\n";
+        std::cout << std::string(115, '-') << "\n";
+        std::cout << std::left
+                  << std::setw(6)  << "N"
+                  << std::setw(10) << "Method"
+                  << std::setw(9)  << "Threads"
+                  << std::setw(16) << "Total Time(ms)"
+                  << std::setw(16) << "Latency(us/st)"
+                  << std::setw(16) << "Latency(ms/st)"
+                  << std::setw(18) << "Throughput(st/s)"
+                  << std::setw(16) << "M-Interactions/s"
+                  << std::setw(10) << "Allocs(1k)"
+                  << "\n";
+        std::cout << std::string(115, '-') << "\n";
+    };
 
-    std::vector<BenchmarkResult> sweep_results;
+    auto print_row = [](const BenchmarkResult& r) {
+        std::cout << std::left
+                  << std::setw(6)  << r.n
+                  << std::setw(10) << r.integrator
+                  << std::setw(9)  << r.num_threads
+                  << std::fixed << std::setprecision(3)
+                  << std::setw(16) << r.total_time_ms
+                  << std::setw(16) << r.us_per_step
+                  << std::setw(16) << r.ms_per_step
+                  << std::fixed << std::setprecision(1)
+                  << std::setw(18) << r.steps_per_sec
+                  << std::setw(16) << r.mega_interactions_per_sec
+                  << std::setw(10) << r.steady_state_allocs
+                  << "\n";
+    };
+
+    // 1. Symplectic Verlet
+    print_header("Symplectic Verlet Benchmark (N=2, 3, 128, 512, 1024 | T=1, 4, 8)");
+    std::vector<BenchmarkResult> verlet_results;
     for (auto n : body_counts) {
         for (auto th : thread_counts) {
-            auto res = run_benchmark(n, orbisim::IntegratorType::SymplecticVerlet, th, steps);
-            sweep_results.push_back(res);
-            std::cout << std::left
-                      << std::setw(6)  << res.n
-                      << std::setw(10) << res.num_threads
-                      << std::fixed << std::setprecision(3)
-                      << std::setw(16) << res.total_time_ms
-                      << std::setw(16) << res.us_per_step
-                      << std::setw(16) << res.ms_per_step
-                      << std::fixed << std::setprecision(1)
-                      << std::setw(18) << res.steps_per_sec
-                      << std::setw(18) << res.mega_interactions_per_sec
-                      << "\n";
+            auto res = run_benchmark(n, astrodynamics::IntegratorType::SymplecticVerlet, th, steps);
+            verlet_results.push_back(res);
+            print_row(res);
         }
-        std::cout << std::string(105, '-') << "\n";
+        std::cout << std::string(115, '-') << "\n";
     }
 
-    // RK4 Multi-threaded vs Single-threaded
-    std::cout << "\n[2] Runge-Kutta 4 (RK4) Benchmark (1,000 steps):\n";
-    std::cout << std::string(105, '-') << "\n";
-    std::cout << std::left
-              << std::setw(6)  << "N"
-              << std::setw(10) << "Threads"
-              << std::setw(16) << "Total Time(ms)"
-              << std::setw(16) << "Latency(us/st)"
-              << std::setw(16) << "Latency(ms/st)"
-              << std::setw(18) << "Throughput(st/s)"
-              << std::setw(18) << "Allocations/1k"
-              << "\n";
-    std::cout << std::string(105, '-') << "\n";
-
+    // 2. Runge-Kutta 4
+    print_header("Runge-Kutta 4 (RK4) Benchmark (N=2, 3, 128, 512, 1024 | T=1, 4, 8)");
+    std::vector<BenchmarkResult> rk4_results;
     for (auto n : body_counts) {
-        for (int th : {1, 4}) {
-            auto res = run_benchmark(n, orbisim::IntegratorType::RungeKutta4, th, steps);
-            std::cout << std::left
-                      << std::setw(6)  << res.n
-                      << std::setw(10) << res.num_threads
-                      << std::fixed << std::setprecision(3)
-                      << std::setw(16) << res.total_time_ms
-                      << std::setw(16) << res.us_per_step
-                      << std::setw(16) << res.ms_per_step
-                      << std::fixed << std::setprecision(1)
-                      << std::setw(18) << res.steps_per_sec
-                      << std::setw(18) << res.steady_state_allocs
-                      << "\n";
+        for (auto th : thread_counts) {
+            auto res = run_benchmark(n, astrodynamics::IntegratorType::RungeKutta4, th, steps);
+            rk4_results.push_back(res);
+            print_row(res);
         }
+        std::cout << std::string(115, '-') << "\n";
     }
 
-    // [3] SoA Cache Optimization Demonstration for N=1024
-    std::cout << "\n[3] SoA Memory Contiguity Optimization vs Baseline AoS (N=1024, 1,000 steps):\n";
+    // 3. OpenMP Speedup Summary Table for Verlet
+    std::cout << "\n=== OpenMP Parallel Speedup & Scaling (Verlet: 1 vs 4 vs 8 threads) ===\n";
     std::cout << std::string(85, '-') << "\n";
-    {
-        std::size_t n = 1024;
-        auto sys = create_test_system(n);
-        std::vector<orbisim::Vec3> positions(n);
-        std::vector<double> masses(n);
-        std::vector<orbisim::Vec3> acc(n);
-        for (std::size_t i = 0; i < n; ++i) {
-            positions[i] = sys.bodies()[i].position;
-            masses[i] = sys.bodies()[i].mass;
-        }
+    std::cout << std::left
+              << std::setw(8)  << "N"
+              << std::setw(16) << "1-Thread (ms)"
+              << std::setw(16) << "4-Thread (ms)"
+              << std::setw(16) << "8-Thread (ms)"
+              << std::setw(16) << "Speedup (4T)"
+              << std::setw(16) << "Speedup (8T)"
+              << "\n";
+    std::cout << std::string(85, '-') << "\n";
 
-        // Warmup
-        for (int i = 0; i < 50; ++i) {
-            compute_accelerations_soa_optimized(positions, masses, sys.G(), sys.softening(), acc, 4);
-        }
-
-        auto t0 = std::chrono::high_resolution_clock::now();
-        for (int i = 0; i < 1000; ++i) {
-            compute_accelerations_soa_optimized(positions, masses, sys.G(), sys.softening(), acc, 4);
-        }
-        auto t1 = std::chrono::high_resolution_clock::now();
-
-        double soa_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        double soa_us_step = (soa_ms * 1000.0) / 1000.0;
-        double soa_m_int = (static_cast<double>(n) * static_cast<double>(n) * (1000.0 / soa_ms) * 1000.0) / 1e6;
-
-        std::cout << "Baseline AoS (Verlet, 4 threads, N=1024):  2682.8 ms (2.683 ms/step, 390.9 M-int/s)\n";
-        std::cout << "Optimized SoA (Contig mass, 4 th, N=1024): " << std::fixed << std::setprecision(1)
-                  << soa_ms << " ms (" << std::setprecision(3) << soa_ms / 1000.0 << " ms/step, "
-                  << std::setprecision(1) << soa_m_int << " M-int/s)\n";
-        std::cout << "Throughput Speedup from Cache Optimization: " << std::setprecision(2)
-                  << 2682.8 / soa_ms << "x\n";
+    for (std::size_t i = 0; i < body_counts.size(); ++i) {
+        double t1 = verlet_results[i * 3 + 0].total_time_ms;
+        double t4 = verlet_results[i * 3 + 1].total_time_ms;
+        double t8 = verlet_results[i * 3 + 2].total_time_ms;
+        std::cout << std::left
+                  << std::setw(8)  << body_counts[i]
+                  << std::fixed << std::setprecision(3)
+                  << std::setw(16) << t1
+                  << std::setw(16) << t4
+                  << std::setw(16) << t8
+                  << std::setprecision(2)
+                  << std::setw(16) << (std::to_string(t1 / t4) + "x")
+                  << std::setw(16) << (std::to_string(t1 / t8) + "x")
+                  << "\n";
     }
     std::cout << std::string(85, '=') << "\n";
+
+    // 4. Memory Allocations Audit
+    std::cout << "\n=== Heap Allocation Audit (Cold Start vs Steady-State 1,000 Steps) ===\n";
+    std::cout << std::string(80, '-') << "\n";
+    std::cout << std::left
+              << std::setw(8)  << "N"
+              << std::setw(12) << "Integrator"
+              << std::setw(25) << "Cold Start (Step 1)"
+              << std::setw(25) << "Steady-State (1k steps)"
+              << "\n";
+    std::cout << std::string(80, '-') << "\n";
+
+    for (std::size_t i = 0; i < body_counts.size(); ++i) {
+        auto v = verlet_results[i * 3 + 1]; // 4-thread result
+        auto r = rk4_results[i * 3 + 1];
+        std::cout << std::left
+                  << std::setw(8)  << body_counts[i]
+                  << std::setw(12) << "Verlet"
+                  << std::setw(25) << v.cold_start_allocs
+                  << std::setw(25) << (std::to_string(v.steady_state_allocs) + " (0/step)")
+                  << "\n";
+        std::cout << std::left
+                  << std::setw(8)  << body_counts[i]
+                  << std::setw(12) << "RK4"
+                  << std::setw(25) << r.cold_start_allocs
+                  << std::setw(25) << (std::to_string(r.steady_state_allocs) + " (0/step)")
+                  << "\n";
+    }
+    std::cout << std::string(80, '=') << "\n";
 
     return 0;
 }

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace orbisim {
+namespace astrodynamics {
 
 struct Vec3 {
     double x{0.0};
@@ -190,4 +190,4 @@ private:
     mutable bool acc_cached_{false};
 };
 
-} // namespace orbisim
+} // namespace astrodynamics

@@ -6,7 +6,7 @@ from model import HamiltonianNN, symplectic_euler_step, rollout_surrogate
 
 def benchmark_hnn():
     print("=" * 80)
-    print("  OrbiSim-3D — PyTorch HNN Surrogate Performance & Memory Benchmark")
+    print("  AstroDynamics 3D — PyTorch HNN Surrogate Performance & Memory Benchmark")
     print("=" * 80)
     print(f"PyTorch Version: {torch.__version__}")
     print(f"Device: CPU (Threads: {torch.get_num_threads()})")

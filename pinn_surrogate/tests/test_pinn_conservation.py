@@ -1,6 +1,6 @@
 """
 pytest suite certifying Hamiltonian conservation, symplectic loss autodiff,
-and 1,000+ step energy stability for OrbiSim-3D Symplectic PINN.
+and 1,000+ step energy stability for AstroDynamics 3D Symplectic PINN.
 """
 
 import sys

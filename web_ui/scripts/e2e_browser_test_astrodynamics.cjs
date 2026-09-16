@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
-const CAPTURES_DIR = '/tmp/orbisim_e2e_captures';
+const CAPTURES_DIR = '/tmp/astrodynamics_e2e_captures';
 if (!fs.existsSync(CAPTURES_DIR)) {
   fs.mkdirSync(CAPTURES_DIR, { recursive: true });
 }
 
 async function runE2ETests() {
-  console.log('🚀 Iniciando Suite de Pruebas E2E Visual QA para OrbiSim-3D...');
+  console.log('🚀 Iniciando Suite de Pruebas E2E Visual QA para AstroDynamics 3D...');
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },

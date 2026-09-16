@@ -1,4 +1,4 @@
-# 🪐 OrbiSim-3D: Motor N-Body de Alto Rendimiento & Capa PINN Simpléctica
+# 🪐 AstroDynamics 3D: Motor N-Body de Alto Rendimiento & Capa PINN Simpléctica
 
 [![Idioma: Español](https://img.shields.io/badge/Idioma-Espa%C3%B1ol-green.svg)](#)
 [![Version: English](https://img.shields.io/badge/Version-English-blue.svg)](README.md)
@@ -85,7 +85,7 @@ $$\mathcal{L}_{\text{total}}(\theta) = \left\| \frac{\partial H_\theta}{\partial
 | :--- | :--- | :--- | :---: |
 | **C++20 Engine** | GoogleTest (`test_nbody`) | Conservación del Centro de Masa $\|V_{cm}\| \approx 0$, Conservación de Energía ($\Delta E / \|E_0\| < 10^{-4}$ en 5,000 pasos) | **SUPERADO (11 ms)** |
 | **PINN Simpléctica** | pytest (`test_pinn_conservation.py`) | Gradientes autodiferenciables, 1,000 pasos sin deriva secular ($\Delta H / H_0 < 0.05$) | **SUPERADO (3.8 s)** |
-| **Frontend WebGL 3D** | Playwright (`e2e_browser_test_orbisim.cjs`) | 0 errores en consola, renderizado a 60 FPS con ACES Filmic Tone Mapping | **SUPERADO (9.9/10)** |
+| **Frontend WebGL 3D** | Playwright (`e2e_browser_test_astrodynamics.cjs`) | 0 errores en consola, renderizado a 60 FPS con ACES Filmic Tone Mapping | **SUPERADO (9.9/10)** |
 
 ---
 
@@ -156,68 +156,68 @@ Abre tu navegador en:
 - **Click izquierdo + arrastre:** Rotar cámara orbital 3D.
 - **Click derecho + arrastre:** Paneo de la cámara.
 - **Rueda del ratón:** Zoom in / Zoom out.
-- **Panel de Control ("OrbiSim Control Deck"):**
-  - **Pestaña Physics:** Seleccionar entre los sistemas **Kepler Sol-Tierra**, **Coreografía de Tres Cuerpos en Figura de 8**, o **Troyanos de Lagrange L4/L5**. Modificar $G$, $\Delta t$, y alternar integradores.
-  - **Pestaña Bodies:** Ajustar masas $m$ y vectores de velocidad inicial $\vec{v}_0 = (v_x, v_y, v_z)$ en tiempo real.
-  - **Pestaña Invariants:** Monitorear en tiempo real el error de energía $\Delta E / |E_0|$, velocidad del centro de masa $\|V_{cm}\|$, y momento angular $\|L\|$.
+- **Panel de Control ("AstroDynamics Mission Deck"):**
+  - **Pestaña de Física:** Alternar entre presets (Kepler, Figure-8, Lagrange L4/L5). Ajustar $G$, $\Delta t$, y cambiar el algoritmo entre **Symplectic Verlet**, **RK4**, y **Symplectic PINN Surrogate**.
+  - **Pestaña de Cuerpos:** Modificar masas $m$ y vectores de velocidad inicial $\vec{v}_0 = (v_x, v_y, v_z)$ dinámicamente.
+  - **Pestaña de Invariantes:** Monitoreo en tiempo real del error relativo de energía $\Delta E / |E_0|$, velocidad del centro de masa $\|V_{cm}\|$, y momento angular $\|L\|$.
 
 ---
 
 ## 🛠️ Estructura del Repositorio
 
 ```text
-OrbiSim-3D/
-├── cpp_core/                      # Núcleo numérico en C++20
+AstroDynamics-3D/
+├── cpp_core/                      # Motor Numérico C++20
 │   ├── include/
-│   │   └── nbody_solver.hpp       # Definición de clases: NBodySystem, Vec3, Body
+│   │   └── nbody_solver.hpp       # Header: NBodySystem, Vec3, Body, integradores
 │   ├── src/
-│   │   └── nbody_solver.cpp       # Implementación SIMD branchless y caching de aceleraciones
+│   │   └── nbody_solver.cpp       # Aceleración SIMD branchless y cacheado zero-allocation
 │   ├── tests/
-│   │   └── test_nbody.cpp         # Pruebas GoogleTest de invariantes físicos
-│   └── CMakeLists.txt             # Configuración C++20, -O3, OpenMP, -march=native
+│   │   └── test_nbody.cpp         # Suite GoogleTest para invariantes físicas de conservación
+│   └── CMakeLists.txt             # -std=c++20, -O3, -fopenmp, -march=native
 ├── pinn_surrogate/                # Capa PINN Simpléctica
-│   ├── model.py                   # Red HNN, función de pérdida y rollout simpléctico
-│   ├── demo_inference.py          # Script interactivo de inferencia y conservación
+│   ├── model.py                   # HamiltonianNN, SymplecticPINNLoss, symplectic_euler_step
+│   ├── demo_inference.py          # Demo interactiva CLI para rollout Hamiltoniano
 │   └── tests/
-│       └── test_pinn_conservation.py # Pruebas pytest en 1,000+ pasos
+│       └── test_pinn_conservation.py # Suite pytest certificando estabilidad energética a 1,000+ pasos
 ├── web_ui/                        # Frontend React 19 + TypeScript + Three.js
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── OrbitCanvas3D.tsx  # Canvas Three.js, shaders, iluminación y estelas
-│   │   │   └── ControlsPanel.tsx  # Panel flotante de controles y HUD de invariantes
-│   │   ├── App.tsx                # Contenedor principal con encabezado
-│   │   ├── physics.ts             # Integradores numéricos del lado del cliente
-│   │   ├── types.ts               # Tipos TypeScript de simulación
-│   │   └── index.css              # Estilos Tailwind CSS v4 y animaciones
+│   │   │   ├── OrbitCanvas3D.tsx  # Canvas 3D Three.js, iluminación, estrellas, trazas orbitales
+│   │   │   └── ControlsPanel.tsx  # Panel interactivo de control & HUD de invariantes
+│   │   ├── App.tsx                # Contenedor principal con header y badges
+│   │   ├── physics.ts             # Integradores numéricos del cliente y presets
+│   │   ├── types.ts               # Definiciones de tipos TypeScript
+│   │   └── index.css              # Estilos Tailwind CSS v4 & animaciones
 │   ├── scripts/
-│   │   └── e2e_browser_test_orbisim.cjs # Suite automatizada de pruebas visuales con Playwright
-│   ├── vite.config.ts             # Configuración de puerto dedicado 5180
+│   │   └── e2e_browser_test_astrodynamics.cjs # Suite automatizada de pruebas visuales con Playwright
+│   ├── vite.config.ts             # Configuración dedicada en puerto 5180
 │   └── package.json
-├── docs/                          # Documentación técnica exhaustiva
-│   ├── ARCHITECTURE.md            # Arquitectura del sistema (Inglés)
-│   ├── ARCHITECTURE.es.md         # Arquitectura del sistema (Español)
-│   ├── API_REFERENCE.md           # Referencia de APIs (Inglés)
-│   └── API_REFERENCE.es.md        # Referencia de APIs (Español)
-├── README.md                      # Documentación principal en Inglés
-├── README.es.md                   # Documentación principal en Español
+├── docs/                          # Documentación exhaustiva técnica y arquitectura
+│   ├── ARCHITECTURE.md            # Arquitectura detallada del sistema (Inglés)
+│   ├── ARCHITECTURE.es.md         # Arquitectura detallada del sistema (Español)
+│   ├── API_REFERENCE.md           # Referencia completa de APIs C++, Python y TS (Inglés)
+│   └── API_REFERENCE.es.md        # Referencia completa de APIs (Español)
+├── README.md                      # Documentación en Inglés
+├── README.es.md                   # Documentación en Español
 └── LICENSE                        # Licencia MIT
 ```
 
 ---
 
-## 📜 Licencia & Citación
+## 📜 Licencia y Cita Académica
 
-Distribuido bajo la Licencia **MIT**. Consulte el archivo `LICENSE` para más información.
+Distribuido bajo la **Licencia MIT**. Consulte `LICENSE` para mayores detalles.
 
-Para citar este trabajo en publicaciones científicas o académicas:
+Si utiliza AstroDynamics 3D en proyectos de investigación o académicos, cite:
 
 ```bibtex
-@software{amundarain2026orbisim3d,
+@software{amundarain2026astrodynamics3d,
   author = {Amundarain, Mois{\'e}s},
-  title = {{OrbiSim-3D: High-Performance N-Body Orbital Engine \& Symplectic PINNs Surrogate}},
+  title = {{AstroDynamics 3D: High-Performance N-Body Orbital Engine \& Symplectic PINNs Surrogate}},
   year = {2026},
   publisher = {GitHub},
   journal = {Proyecto Tennessee},
-  url = {https://github.com/moises-inc/OrbiSim-3D}
+  url = {https://github.com/moises-inc/astrodynamics-3d}
 }
 ```

@@ -1,12 +1,12 @@
-# Arquitectura del Sistema OrbiSim-3D
+# Arquitectura del Sistema AstroDynamics 3D
 
-Este documento proporciona una especificación técnica, arquitectónica y matemática exhaustiva de **OrbiSim-3D**, un simulador gravitacional híbrido de N cuerpos con capa surrogate PINN simpléctica y visualización interactiva WebGL 3D.
+Este documento proporciona una especificación técnica, arquitectónica y matemática exhaustiva de **AstroDynamics 3D**, un simulador gravitacional híbrido de N cuerpos con capa surrogate PINN simpléctica y visualización interactiva WebGL 3D.
 
 ---
 
 ## 1. Descomposición Modular del Sistema
 
-OrbiSim-3D está estructurado en tres capas desacopladas e interoperables:
+AstroDynamics 3D está estructurado en tres capas desacopladas e interoperables:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -88,6 +88,6 @@ Dado que el determinante jacobiano satisface $\det J = 1$, la 2-forma simplécti
   - Estelas orbitales: Geometría dinámica `BufferGeometry` actualizada cuadro a cuadro.
 
 ### 4.2 Controles e Invariantes
-- **OrbiSim Control Deck:** Ubicado en `top-16 right-6` con acabado glassmorphism (`slate-900/90 backdrop-blur-xl`).
+- **AstroDynamics Mission Deck:** Ubicado en `top-16 right-6` con acabado glassmorphism (`slate-900/90 backdrop-blur-xl`).
 - **HUD de Telemetría:** Anclado en `bottom-6 left-6` transmitiendo el estado del integrador, conteo de partículas y guía de interacción.
 - **Observables en Tiempo Real:** Cálculo simultáneo a 60 FPS de la energía total $E = T + V$, error relativo $\Delta E / |E_0|$, velocidad del centro de masa $\|V_{cm}\|$, y momento angular total $\|L\|$.

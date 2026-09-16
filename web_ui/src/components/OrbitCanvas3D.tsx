@@ -422,7 +422,7 @@ export const OrbitCanvas3D: React.FC<OrbitCanvas3DProps> = ({
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-slate-100 font-semibold text-sm">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 animate-pulse" />
-            <span>OrbiSim-3D Photoreal Engine</span>
+            <span>AstroDynamics 3D Photoreal Engine</span>
           </div>
           <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-cyan-300 font-semibold border border-cyan-500/30">
             WebGL 3D

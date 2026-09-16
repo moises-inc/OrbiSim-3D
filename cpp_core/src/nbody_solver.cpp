@@ -8,7 +8,7 @@
 #include <omp.h>
 #endif
 
-namespace orbisim {
+namespace astrodynamics {
 
 NBodySystem::NBodySystem(double G, double softening)
     : G_(G), softening_(softening) {}
@@ -403,4 +403,4 @@ std::vector<NBodySystem::TrajectorySnapshot> NBodySystem::simulate(
     return snapshots;
 }
 
-} // namespace orbisim
+} // namespace astrodynamics

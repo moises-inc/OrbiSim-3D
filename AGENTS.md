@@ -1,4 +1,4 @@
-# AGENTS.md (OpenCode & Agent CLI Environment — OrbiSim-3D)
+# AGENTS.md (OpenCode & Agent CLI Environment — AstroDynamics 3D)
 
 Este archivo configura las reglas de comportamiento, autodeclaración de habilidades, asignación de subagentes y directrices de prevención de desbordamiento de tokens para OpenCode y Agent CLI en este repositorio.
 

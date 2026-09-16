@@ -8,7 +8,7 @@ from model import HamiltonianNN, rollout_surrogate
 
 def run_demo():
     print("=" * 65)
-    print("🪐 OrbiSim-3D — Demo de Inferencia PINN Simpléctica (HNN)")
+    print("🪐 AstroDynamics 3D — Demo de Inferencia PINN Simpléctica (HNN)")
     print("=" * 65)
 
     torch.manual_seed(42)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OrbiSimCore VERSION 1.0.0 LANGUAGES CXX)
+project(AstroDynamics3DCore VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,11 +9,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(OpenMP REQUIRED)
 
 # Core Library
-add_library(orbisim_core STATIC
+add_library(astrodynamics_core STATIC
     src/nbody_solver.cpp
 )
 
-target_compile_options(orbisim_core PUBLIC
+target_compile_options(astrodynamics_core PUBLIC
     $<$<CXX_COMPILER_ID:GNU,Clang>:
         -O3
         -march=native
@@ -26,12 +26,12 @@ target_compile_options(orbisim_core PUBLIC
     >
 )
 
-target_include_directories(orbisim_core PUBLIC
+target_include_directories(astrodynamics_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(orbisim_core PUBLIC
+target_link_libraries(astrodynamics_core PUBLIC
     OpenMP::OpenMP_CXX
 )
 
@@ -53,7 +53,7 @@ add_executable(test_nbody
 )
 
 target_link_libraries(test_nbody PRIVATE
-    orbisim_core
+    astrodynamics_core
     GTest::gtest_main
 )
 

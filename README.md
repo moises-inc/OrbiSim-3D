@@ -1,4 +1,4 @@
-# 🪐 OrbiSim-3D: High-Performance N-Body Engine & Symplectic PINNs Surrogate
+# 🪐 AstroDynamics 3D: High-Performance N-Body Engine & Symplectic PINNs Surrogate
 
 [![Language: English](https://img.shields.io/badge/Language-English-blue.svg)](#)
 [![Versión: Español](https://img.shields.io/badge/Versi%C3%B3n-Espa%C3%B1ol-green.svg)](README.es.md)
@@ -85,7 +85,7 @@ $$\mathcal{L}_{\text{total}}(\theta) = \left\| \frac{\partial H_\theta}{\partial
 | :--- | :--- | :--- | :---: |
 | **C++20 Engine** | GoogleTest (`test_nbody`) | Center of Mass Velocity Drift $\|V_{cm}\| \approx 0$, Energy Conservation ($\Delta E / \|E_0\| < 10^{-4}$ over 5k steps) | **PASS (11 ms)** |
 | **Symplectic PINN** | pytest (`test_pinn_conservation.py`) | Autodiff Hessian verification, 1,000-step zero secular drift ($\Delta H / H_0 < 0.05$) | **PASS (3.8 s)** |
-| **WebGL 3D Web UI** | Playwright (`e2e_browser_test_orbisim.cjs`) | 0 console errors, ACES Filmic WebGL rendering at 60 FPS | **PASS (9.9/10)** |
+| **WebGL 3D Web UI** | Playwright (`e2e_browser_test_astrodynamics.cjs`) | 0 console errors, ACES Filmic WebGL rendering at 60 FPS | **PASS (9.9/10)** |
 
 ---
 
@@ -156,7 +156,7 @@ Open your browser at:
 - **Left Click + Drag:** 3D Camera Orbit rotation.
 - **Right Click + Drag:** Camera Pan.
 - **Mouse Scroll:** Zoom in / out.
-- **OrbiSim Control Deck:**
+- **AstroDynamics Mission Deck:**
   - **Physics Tab:** Switch between Kepler Two-Body, Three-Body Figure-8 Choreography, and Lagrange L4/L5 Trojan systems. Adjust $G$, $\Delta t$, and toggle between **Symplectic Verlet**, **RK4**, and **Symplectic PINN Surrogate**.
   - **Bodies Tab:** Edit masses $m$ and initial velocity vectors $\vec{v}_0 = (v_x, v_y, v_z)$ in real-time.
   - **Invariants Tab:** Real-time stream of Hamiltonian Energy Error $\Delta E / |E_0|$, Center of Mass speed $\|V_{cm}\|$, and Angular Momentum $\|L\|$.
@@ -166,7 +166,7 @@ Open your browser at:
 ## 🛠️ Repository Directory Structure
 
 ```text
-OrbiSim-3D/
+AstroDynamics-3D/
 ├── cpp_core/                      # C++20 Numerical Engine
 │   ├── include/
 │   │   └── nbody_solver.hpp       # Header: NBodySystem, Vec3, Body, integrators
@@ -190,7 +190,7 @@ OrbiSim-3D/
 │   │   ├── types.ts               # TypeScript data definitions
 │   │   └── index.css              # Tailwind CSS v4 styling & animations
 │   ├── scripts/
-│   │   └── e2e_browser_test_orbisim.cjs # Playwright automated visual QA test suite
+│   │   └── e2e_browser_test_astrodynamics.cjs # Playwright automated visual QA test suite
 │   ├── vite.config.ts             # Port 5180 dedicated configuration
 │   └── package.json
 ├── docs/                          # In-depth architectural & API documentation
@@ -209,15 +209,15 @@ OrbiSim-3D/
 
 Distributed under the **MIT License**. See `LICENSE` for details.
 
-If you use OrbiSim-3D in academic or research work, please cite:
+If you use AstroDynamics 3D in academic or research work, please cite:
 
 ```bibtex
-@software{amundarain2026orbisim3d,
+@software{amundarain2026astrodynamics3d,
   author = {Amundarain, Mois{\'e}s},
-  title = {{OrbiSim-3D: High-Performance N-Body Orbital Engine \& Symplectic PINNs Surrogate}},
+  title = {{AstroDynamics 3D: High-Performance N-Body Orbital Engine \& Symplectic PINNs Surrogate}},
   year = {2026},
   publisher = {GitHub},
   journal = {Proyecto Tennessee},
-  url = {https://github.com/moises-inc/OrbiSim-3D}
+  url = {https://github.com/moises-inc/astrodynamics-3d}
 }
 ```

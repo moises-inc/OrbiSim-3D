@@ -1,13 +1,13 @@
-# OrbiSim-3D API Reference
+# AstroDynamics 3D API Reference
 
-This document provides complete technical specifications for the public classes, functions, and interfaces in OrbiSim-3D across C++20, Python, and TypeScript.
+This document provides complete technical specifications for the public classes, functions, and interfaces in AstroDynamics 3D across C++20, Python, and TypeScript.
 
 ---
 
-## 1. C++20 Core Library (`orbisim_core`)
+## 1. C++20 Core Library (`astrodynamics_core`)
 
-### Namespace: `orbisim`
-Header: [`cpp_core/include/nbody_solver.hpp`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/OrbiSim-3D/cpp_core/include/nbody_solver.hpp)
+### Namespace: `astrodynamics`
+Header: [`cpp_core/include/nbody_solver.hpp`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/cpp_core/include/nbody_solver.hpp)
 
 #### `struct Vec3`
 Represents a 3D vector of double-precision floating-point coordinates.
@@ -60,7 +60,7 @@ Main N-body integration and simulation manager.
 
 ## 2. Python PINN Surrogate Module (`pinn_surrogate`)
 
-Module: [`pinn_surrogate/model.py`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/OrbiSim-3D/pinn_surrogate/model.py)
+Module: [`pinn_surrogate/model.py`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/pinn_surrogate/model.py)
 
 #### `class HamiltonianNN(torch.nn.Module)`
 Neural network parametrizing scalar Hamiltonian energy $H_\theta(q, p)$.
@@ -92,7 +92,7 @@ Rolls out trajectory over `num_steps` steps and tracks state and energy history.
 
 ## 3. TypeScript Web Client Module (`web_ui/src`)
 
-Module: [`web_ui/src/physics.ts`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/OrbiSim-3D/web_ui/src/physics.ts)
+Module: [`web_ui/src/physics.ts`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/web_ui/src/physics.ts)
 
 #### Types (`types.ts`):
 - `Vector3D`: `{ x: number, y: number, z: number }`

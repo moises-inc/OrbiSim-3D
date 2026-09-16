@@ -1,12 +1,12 @@
-# OrbiSim-3D System Architecture
+# AstroDynamics 3D System Architecture
 
-This document provides an in-depth architectural and mathematical specification of **OrbiSim-3D**, a hybrid high-performance N-body gravitational simulator and symplectic Physics-Informed Neural Network (PINN) surrogate with interactive 3D WebGL visualization.
+This document provides an in-depth architectural and mathematical specification of **AstroDynamics 3D**, a hybrid high-performance N-body gravitational simulator and symplectic Physics-Informed Neural Network (PINN) surrogate with interactive 3D WebGL visualization.
 
 ---
 
 ## 1. Modular Decomposition
 
-OrbiSim-3D is organized into three decoupled layers:
+AstroDynamics 3D is organized into three decoupled layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -90,6 +90,6 @@ Because the transformation Jacobian satisfies $\det J = 1$, the exterior 2-form 
   - Orbital wake: Dynamic `THREE.Line` geometry buffer updated per frame.
 
 ### 4.2 Controls & Invariant Monitoring
-- **OrbiSim Control Deck:** Positioned at `top-16 right-6` with glassmorphism backdrop (`slate-900/90 backdrop-blur-xl`).
+- **AstroDynamics Mission Deck:** Positioned at `top-16 right-6` with glassmorphism backdrop (`slate-900/90 backdrop-blur-xl`).
 - **Telemetry HUD:** Fixed at `bottom-6 left-6` streaming active integrator state, particle counts, and interaction guide.
 - **Live Observables:** Computes total energy $E = T + V$, relative error $\Delta E / |E_0|$, center of mass speed $\|V_{cm}\|$, and total angular momentum magnitude $\|L\|$ on each simulation tick.

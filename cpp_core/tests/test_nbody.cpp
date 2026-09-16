@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-using namespace orbisim;
+using namespace astrodynamics;
 
 // Fixture for a two-body Sun-Planet system
 class TwoBodyTest : public ::testing::Test {

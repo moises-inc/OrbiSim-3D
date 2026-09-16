@@ -65,7 +65,7 @@ export function App() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-white tracking-tight">OrbiSim-3D</h1>
+              <h1 className="text-sm font-bold text-white tracking-tight">AstroDynamics 3D</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 Proyecto Tennessee
               </span>

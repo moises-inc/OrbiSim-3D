@@ -1,5 +1,5 @@
 r"""
-Hamiltonian Neural Network (HNN) & Symplectic PINN Surrogate for OrbiSim-3D.
+Hamiltonian Neural Network (HNN) & Symplectic PINN Surrogate for AstroDynamics 3D.
 
 Enforces canonical Hamiltonian equations via autodifferentiation:
     \dot{q} = \partial H / \partial p
