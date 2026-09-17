@@ -11,38 +11,9 @@
 [![Proyecto Tennessee](https://img.shields.io/badge/Proyecto-Tennessee-purple.svg)](https://github.com/moises-inc?tab=projects)
 
 > **High-Performance Celestial Mechanics Integration Engine with Symplectic Physics-Informed Neural Networks (PINNs) and Interactive 3D WebGL Visualization.**  
-> Part of **Proyecto Tennessee** (*Astroinformatics & Scientific Computing Portfolio*) by **Moisés Amundarain** (*Laboratorio LIRIA / Universidad San Sebastián*).
+> Part of **Proyecto Tennessee** (*Astroinformatics & Scientific Computing Portfolio*) by **Moisés Amundarain**.
 
 👉 **[Haga clic aquí para leer la versión en Español / Click here for Spanish version](README.es.md)**
-
----
-
-## 📌 Architecture & System Overview
-
-```mermaid
-flowchart TD
-    subgraph Core ["🚀 C++20 Numerical Core Engine (cpp_core/)"]
-        A["N-Body System State<br/><i>q, p, masses</i>"] --> B["Branchless Plummer Gravitational Kernel<br/><i>F_i = -∇ U_Plummer</i>"]
-        B --> C["OpenMP Multithreading & AVX2/FMA SIMD"]
-        C --> D1["Symplectic Velocity Verlet<br/><i>Shadow Hamiltonian H~ = H + O(Δt²)</i>"]
-        C --> D2["Runge-Kutta 4th Order (RK4)<br/><i>High Local Truncation O(Δt⁵)</i>"]
-    end
-
-    subgraph Surrogate ["🧠 Symplectic PINN Layer (pinn_surrogate/)"]
-        E["Hamiltonian Neural Network H_θ(q, p)<br/><i>Smooth C^∞ Tanh / SiLU Activations</i>"] --> F["Canonical Autodiff Vector Field<br/><i>q_dot = ∂H/∂p, p_dot = -∂H/∂q</i>"]
-        F --> G["Symplectic Loss Function<br/><i>L = ||∂H/∂p - q_dot||² + ||∂H/∂q + p_dot||² + λ_E ||H(t) - H₀||²</i>"]
-        G --> H["Symplectic Euler Rollout<br/><i>Exact 2-Form Pullback Φ* ω = ω</i>"]
-    end
-
-    subgraph UI ["💻 3D WebGL Frontend (web_ui/)"]
-        I["React 19 + TypeScript + Three.js"] --> J["OrbitCanvas3D.tsx<br/><i>60 FPS WebGL, Stars & Orbit Trails</i>"]
-        I --> K["ControlsPanel.tsx<br/><i>Real-Time Mass, Velocity, G & Integrator Controls</i>"]
-        J --> L["Live Invariants Telemetry HUD<br/><i>Energy Drift, CM Velocity, Angular Momentum</i>"]
-    end
-
-    D1 -.-> E
-    H -.-> I
-```
 
 ---
 

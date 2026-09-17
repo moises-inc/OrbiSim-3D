@@ -11,38 +11,9 @@
 [![Proyecto Tennessee](https://img.shields.io/badge/Proyecto-Tennessee-purple.svg)](https://github.com/moises-inc?tab=projects)
 
 > **Motor de Integración Numérica para Mecánica Celeste de Alto Rendimiento con Redes Neuronales Informadas por la Física (PINNs Simplécticas) y Visualización WebGL 3D Interactiva.**  
-> Componente insigne (**Flagship App #1**) de **Proyecto Tennessee** (*Portafolio de Astroinformática & Computación Científica*) por **Moisés Amundarain** (*Laboratorio LIRIA / Universidad San Sebastián*).
+> Componente insigne (**Flagship App #1**) de **Proyecto Tennessee** (*Portafolio de Astroinformática & Computación Científica*) por **Moisés Amundarain**.
 
 👉 **[Click here to read the English version / Haga clic aquí para la versión en Inglés](README.md)**
-
----
-
-## 📌 Arquitectura General del Sistema
-
-```mermaid
-flowchart TD
-    subgraph Core ["🚀 Motor Numérico C++20 (cpp_core/)"]
-        A["Estado del Sistema N-Body<br/><i>q, p, masas</i>"] --> B["Kernel Gravitacional Plummer Branchless<br/><i>F_i = -∇ U_Plummer</i>"]
-        B --> C["Paralelismo OpenMP & Vectorización SIMD AVX2/FMA"]
-        C --> D1["Verlet Simpléctico<br/><i>Hamiltoniano Sombra H~ = H + O(Δt²)</i>"]
-        C --> D2["Runge-Kutta 4º Orden (RK4)<br/><i>Alta Precisión Local O(Δt⁵)</i>"]
-    end
-
-    subgraph Surrogate ["🧠 Capa PINN Simpléctica (pinn_surrogate/)"]
-        E["Red Neuronal Hamiltoniana H_θ(q, p)<br/><i>Activaciones Suaves C^∞ Tanh / SiLU</i>"] --> F["Campo Vectorial Canónico Autodiferenciable<br/><i>q_dot = ∂H/∂p, p_dot = -∂H/∂q</i>"]
-        F --> G["Pérdida Simpléctica<br/><i>L = ||∂H/∂p - q_dot||² + ||∂H/∂q + p_dot||² + λ_E ||H(t) - H₀||²</i>"]
-        G --> H["Integrador Simpléctico Euler<br/><i>Preservación Exacta de la 2-Forma Φ* ω = ω</i>"]
-    end
-
-    subgraph UI ["💻 Frontend WebGL 3D (web_ui/)"]
-        I["React 19 + TypeScript + Three.js"] --> J["OrbitCanvas3D.tsx<br/><i>WebGL a 60 FPS, Estrellas y Estelas Orbitales</i>"]
-        I --> K["ControlsPanel.tsx<br/><i>Control en Tiempo Real de Masa, Velocidad, G e Integradores</i>"]
-        J --> L["HUD de Telemetría de Invariantes<br/><i>Deriva de Energía, Velocidad CM, Momento Angular</i>"]
-    end
-
-    D1 -.-> E
-    H -.-> I
-```
 
 ---
 
