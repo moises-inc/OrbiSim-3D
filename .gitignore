@@ -33,3 +33,10 @@ dist-ssr/
 .DS_Store
 *.tsbuildinfo
 .playwright-cli/
+
+# Prompts, Agent Instructions & Secrets
+PROMPT_*.md
+SYSTEM_PROMPT_*.md
+*.prompt.md
+.env*
+
