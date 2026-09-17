@@ -34,18 +34,22 @@ Donde:
 El shader del Sol ([`SunShader.ts`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/web_ui/src/visuals/SunShader.ts)) reproduce la turbulencia del plasma y el oscurecimiento del limbo fotosférico (*limb brightening / corona*).
 
 #### 1. Campo de Ruido Multifrecuencia
-A partir de la posición espacial $\vec{r} \in \mathbb{R}^3$ del fragmento y el tiempo $t' = 0.45 t$:
+A partir de la posición espacial local del vértice $\vec{r} \in \mathbb{R}^3$ (`vPosition`) y el tiempo escalado $t' = 0.45 t$ (`uTime * 0.45`):
+
+Las dos octavas de turbulencia generadas por la función analítica de ruido Simplex tridimensional $\operatorname{snoise}: \mathbb{R}^3 \to [-1, 1]$ se evalúan con sus correspondientes frecuencias espaciales y vectores de advección temporal en $\mathbb{R}^3$:
 
 $$
-s_1(\vec{r}, t) = \operatorname{snoise}\left(3.5 \vec{r} + (0, 0.8 t', 0.4 t')\right)
+N_1(\vec{r}, t) = \operatorname{snoise}\left( 3.5 \vec{r} + \begin{pmatrix} 0 \\ 0.8 t' \\ 0.4 t' \end{pmatrix} \right)
 $$
 
 $$
-s_2(\vec{r}, t) = 0.5 \operatorname{snoise}\left(8.0 \vec{r} - (0.5 t', 0, 0.7 t')\right)
+N_2(\vec{r}, t) = \operatorname{snoise}\left( 8.0 \vec{r} - \begin{pmatrix} 0.5 t' \\ 0 \\ 0.7 t' \end{pmatrix} \right)
 $$
 
+El campo fotosférico resultante combina ambas octavas mediante una síntesis espectral ponderada con amplitudes $1/2$ y $1/4$, centrando el escalar en el rango normalizado $[0, 1]$:
+
 $$
-s(\vec{r}, t) = 0.5 \left(s_1(\vec{r}, t) + s_2(\vec{r}, t)\right) + 0.5 \in [0, 1]
+s(\vec{r}, t) = \frac{1}{2} \left[ N_1(\vec{r}, t) + \frac{1}{2} N_2(\vec{r}, t) \right] + \frac{1}{2} = \frac{1}{2} N_1(\vec{r}, t) + \frac{1}{4} N_2(\vec{r}, t) + \frac{1}{2}
 $$
 
 #### 2. Interpolación Dinámica de Plasma

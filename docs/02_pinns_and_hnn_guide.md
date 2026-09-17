@@ -29,21 +29,27 @@ Donde:
 - $q = (\vec{r}_1^T, \dots, \vec{r}_N^T)^T \in \mathbb{R}^{3N}$ representa las posiciones generalizadas cartesianas.
 - $p = (\vec{p}_1^T, \dots, \vec{p}_N^T)^T \in \mathbb{R}^{3N}$ representa los momentos lineales conjugados ($\vec{p}_i = m_i \vec{v}_i \in \mathbb{R}^3$).
 
-El **Hamiltoniano** $H(q, p)$ describe la energía total del sistema como la suma de energía cinética $T(p)$ y energía potencial $V(q)$:
+El **Hamiltoniano** físico del sistema $H(q, p)$ describe la energía total conservada como la suma de la energía cinética $T(p)$ y la energía potencial gravitacional $U(q)$ (denotada comúnmente también como $V(q)$ en la parametrización de redes neuronales):
 
 $$
-H(q, p) = T(p) + V(q) = \frac{1}{2} p^T M^{-1} p + V(q)
+H(q, p) = T(p) + U(q) = \frac{1}{2} p^T M^{-1} p - \sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}
 $$
 
 Donde:
-- $T(p) = \frac{1}{2} p^T M^{-1} p = \sum_{i=1}^N \frac{\|\vec{p}_i\|^2}{2 m_i}$ es la energía cinética total.
-- $V(q) = -\sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}$ es la energía potencial gravitacional con parámetro de suavizado de Plummer $\epsilon > 0$.
-- $M = \operatorname{diag}(m_1, m_1, m_1, \dots, m_N, m_N, m_N) \in \mathbb{R}^{3N \times 3N}$ es la matriz diagonal invertible de masas.
+- $T(p) = \frac{1}{2} p^T M^{-1} p = \sum_{i=1}^N \frac{\|\vec{p}_i\|^2}{2 m_i}$ es la energía cinética total del sistema.
+- $U(q) = -\sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}$ es la energía potencial gravitacional total del sistema con parámetro de suavizado de Plummer $\epsilon > 0$.
+- $M = \operatorname{diag}(m_1 I_3, \dots, m_N I_3) \in \mathbb{R}^{3N \times 3N}$ es la matriz diagonal invertible de masas, con $I_3 \in \mathbb{R}^{3 \times 3}$ la matriz identidad.
 
 Las **Ecuaciones Canónicas de Hamilton** rigen la evolución temporal del flujo dinámico continuo:
 
 $$
-\dot{q} = \frac{\partial H}{\partial p}, \qquad \dot{p} = -\frac{\partial H}{\partial q}
+\dot{q} = \nabla_p H(q, p) = M^{-1} p, \qquad \dot{p} = -\nabla_q H(q, p) = -\nabla_q U(q)
+$$
+
+Para cada cuerpo celeste $i \in \{1, \dots, N\}$, esto recupera de manera exacta la cinemática newtoniana y el campo gravitacional aceleratorio:
+
+$$
+\dot{\vec{r}}_i = \frac{\vec{p}_i}{m_i}, \qquad \dot{\vec{p}}_i = \vec{F}_i = -\nabla_{\vec{r}_i} U(q) = \sum_{\substack{j=1 \\ j \ne i}}^N \frac{G m_i m_j (\vec{r}_j - \vec{r}_i)}{\left(\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2\right)^{3/2}}
 $$
 
 En notación simpléctica compacta:
@@ -56,12 +62,18 @@ Dado que $\Omega^T = -\Omega$ y $\Omega^2 = -I_{6N}$, la matriz canónica $\Omeg
 
 ### Aprendizaje Mediante Autodiferenciación
 
-En lugar de predecir posiciones futuras como una caja negra arbitraria, **AstroDynamics 3D** entrena una red neuronal profunda $H_{\theta}(q, p): \mathbb{R}^{6N} \to \mathbb{R}$ parametrizada por pesos $\theta$. 
+En lugar de predecir posiciones futuras como una caja negra arbitraria, **AstroDynamics 3D** entrena una red neuronal profunda $H_{\theta}(q, p): \mathbb{R}^{6N} \to \mathbb{R}$ parametrizada por pesos $\theta$. En su versión separable (`separable=True` en [`pinn_surrogate/model.py`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/pinn_surrogate/model.py)):
+
+$$
+H_{\theta}(q, p) = T_{\theta}(p) + V_{\theta}(q)
+$$
+
+donde `net_T` aproxima la energía cinética $T(p)$ y `net_V` aproxima la energía potencial $U(q)$.
 
 A partir de la red escalar, las derivadas temporales canónicas se extraen analíticamente mediante Autograd (PyTorch/JAX):
 
 $$
-\hat{\dot{q}} = \frac{\partial H_{\theta}}{\partial p}, \qquad \hat{\dot{p}} = -\frac{\partial H_{\theta}}{\partial q}
+\hat{\dot{q}} = \nabla_p H_{\theta}(q, p) = \frac{\partial H_{\theta}}{\partial p}, \qquad \hat{\dot{p}} = -\nabla_q H_{\theta}(q, p) = -\frac{\partial H_{\theta}}{\partial q}
 $$
 
 Para cada partícula $i \in \{1, \dots, N\}$:
