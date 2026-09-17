@@ -43,13 +43,13 @@ Main N-body integration and simulation manager.
   - `void set_G(double G) noexcept`: Sets the gravitational constant $G$.
   - `void set_softening(double eps) noexcept`: Sets the Plummer softening parameter $\epsilon$.
 - **Observables & Invariants:**
-  - `[[nodiscard]] Vec3 center_of_mass() const noexcept`: Computes $\vec{R}_{cm} = \frac{\sum m_i \vec{r}_i}{\sum m_i}$.
-  - `[[nodiscard]] Vec3 center_of_mass_velocity() const noexcept`: Computes $\vec{V}_{cm} = \frac{\sum m_i \vec{v}_i}{\sum m_i}$.
-  - `[[nodiscard]] double kinetic_energy() const noexcept`: Total kinetic energy $T = \sum \frac{1}{2} m_i \|\vec{v}_i\|^2$.
-  - `[[nodiscard]] double potential_energy() const noexcept`: Total Plummer potential energy $U$.
-  - `[[nodiscard]] double total_energy() const noexcept`: $E = T + U$.
-  - `[[nodiscard]] Vec3 total_angular_momentum() const noexcept`: $\vec{L} = \sum m_i (\vec{r}_i \times \vec{v}_i)$.
-  - `[[nodiscard]] Vec3 total_linear_momentum() const noexcept`: $\vec{P} = \sum m_i \vec{v}_i$.
+  - `[[nodiscard]] Vec3 center_of_mass() const noexcept`: Computes $\vec{R}_{\text{cm}} = \frac{1}{M_{\text{tot}}} \sum_{i=1}^N m_i \vec{r}_i$.
+  - `[[nodiscard]] Vec3 center_of_mass_velocity() const noexcept`: Computes $\vec{V}_{\text{cm}} = \frac{1}{M_{\text{tot}}} \sum_{i=1}^N m_i \vec{v}_i$.
+  - `[[nodiscard]] double kinetic_energy() const noexcept`: Total kinetic energy $T = \frac{1}{2} \sum_{i=1}^N m_i \|\vec{v}_i\|^2$.
+  - `[[nodiscard]] double potential_energy() const noexcept`: Total Plummer potential energy $U = -\sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}$.
+  - `[[nodiscard]] double total_energy() const noexcept`: Total Hamiltonian energy $H = T + U$.
+  - `[[nodiscard]] Vec3 total_angular_momentum() const noexcept`: Total angular momentum $\vec{L} = \sum_{i=1}^N m_i (\vec{r}_i \times \vec{v}_i)$.
+  - `[[nodiscard]] Vec3 total_linear_momentum() const noexcept`: Total linear momentum $\vec{P}_{\text{tot}} = \sum_{i=1}^N m_i \vec{v}_i$.
 - **Integration Steps:**
   - `void step_symplectic_verlet(double dt)`: Advances state by $\Delta t$ with cached acceleration.
   - `void step_rk4(double dt)`: Advances state by $\Delta t$ via RK4.

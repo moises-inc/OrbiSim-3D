@@ -43,13 +43,13 @@ Gestor principal del sistema gravitacional de N cuerpos.
   - `void set_G(double G) noexcept`: Configura la constante gravitacional $G$.
   - `void set_softening(double eps) noexcept`: Configura el parámetro de suavizado de Plummer $\epsilon$.
 - **Invariantes y Observables:**
-  - `[[nodiscard]] Vec3 center_of_mass() const noexcept`: Calcula $\vec{R}_{cm} = \frac{\sum m_i \vec{r}_i}{\sum m_i}$.
-  - `[[nodiscard]] Vec3 center_of_mass_velocity() const noexcept`: Calcula $\vec{V}_{cm} = \frac{\sum m_i \vec{v}_i}{\sum m_i}$.
-  - `[[nodiscard]] double kinetic_energy() const noexcept`: Energía cinética total $T = \sum \frac{1}{2} m_i \|\vec{v}_i\|^2$.
-  - `[[nodiscard]] double potential_energy() const noexcept`: Energía potencial de Plummer total $U$.
-  - `[[nodiscard]] double total_energy() const noexcept`: Energía total $E = T + U$.
-  - `[[nodiscard]] Vec3 total_angular_momentum() const noexcept`: Momento angular total $\vec{L} = \sum m_i (\vec{r}_i \times \vec{v}_i)$.
-  - `[[nodiscard]] Vec3 total_linear_momentum() const noexcept`: Momento lineal total $\vec{P} = \sum m_i \vec{v}_i$.
+  - `[[nodiscard]] Vec3 center_of_mass() const noexcept`: Calcula $\vec{R}_{\text{cm}} = \frac{1}{M_{\text{tot}}} \sum_{i=1}^N m_i \vec{r}_i$.
+  - `[[nodiscard]] Vec3 center_of_mass_velocity() const noexcept`: Calcula $\vec{V}_{\text{cm}} = \frac{1}{M_{\text{tot}}} \sum_{i=1}^N m_i \vec{v}_i$.
+  - `[[nodiscard]] double kinetic_energy() const noexcept`: Energía cinética total $T = \frac{1}{2} \sum_{i=1}^N m_i \|\vec{v}_i\|^2$.
+  - `[[nodiscard]] double potential_energy() const noexcept`: Energía potencial de Plummer total $U = -\sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}$.
+  - `[[nodiscard]] double total_energy() const noexcept`: Energía total del Hamiltoniano $H = T + U$.
+  - `[[nodiscard]] Vec3 total_angular_momentum() const noexcept`: Momento angular total $\vec{L} = \sum_{i=1}^N m_i (\vec{r}_i \times \vec{v}_i)$.
+  - `[[nodiscard]] Vec3 total_linear_momentum() const noexcept`: Momento lineal total $\vec{P}_{\text{tot}} = \sum_{i=1}^N m_i \vec{v}_i$.
 - **Pasos de Integración:**
   - `void step_symplectic_verlet(double dt)`: Avanza el sistema en $\Delta t$ con reciclaje de aceleración.
   - `void step_rk4(double dt)`: Avanza el sistema en $\Delta t$ mediante RK4.
