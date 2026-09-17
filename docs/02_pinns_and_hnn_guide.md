@@ -38,7 +38,7 @@ $$
 Donde:
 - $T(p) = \frac{1}{2} p^T M^{-1} p = \sum_{i=1}^N \frac{\|\vec{p}_i\|^2}{2 m_i}$ es la energía cinética total del sistema.
 - $U(q) = -\sum_{1 \le i < j \le N} \frac{G m_i m_j}{\sqrt{\|\vec{r}_j - \vec{r}_i\|^2 + \epsilon^2}}$ es la energía potencial gravitacional total del sistema con parámetro de suavizado de Plummer $\epsilon > 0$.
-- $M = \operatorname{diag}(m_1 I_3, \dots, m_N I_3) \in \mathbb{R}^{3N \times 3N}$ es la matriz diagonal invertible de masas, con $I_3 \in \mathbb{R}^{3 \times 3}$ la matriz identidad.
+- $M = \text{diag}(m_1 I_3, \dots, m_N I_3) \in \mathbb{R}^{3N \times 3N}$ es la matriz diagonal invertible de masas, con $I_3 \in \mathbb{R}^{3 \times 3}$ la matriz identidad.
 
 Las **Ecuaciones Canónicas de Hamilton** rigen la evolución temporal del flujo dinámico continuo:
 
@@ -154,13 +154,19 @@ $$
 
 Esta transformación global $\Phi: (q_n, p_n) \mapsto (q_{n+1}, p_{n+1})$ se descompone de forma exacta en dos sub-pasos elementales:
 
-1. **Sub-paso 1 (Impulso gravitatorio):** $\Phi_1: \begin{pmatrix} q_n \\ p_n \end{pmatrix} \mapsto \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n \\ p_n - \Delta t \nabla_q V(q_n) \end{pmatrix}$.  
+1. **Sub-paso 1 (Impulso gravitatorio):**
+   $$
+   \Phi_1: \begin{pmatrix} q_n \\ p_n \end{pmatrix} \mapsto \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n \\ p_n - \Delta t \nabla_q V(q_n) \end{pmatrix}
+   $$
    Su matriz Jacobiana respecto a $(q_n, p_n)$ es un bloque triangular inferior unipotente:
    $$
    J_1 = \begin{pmatrix} I_{3N} & 0 \\ -\Delta t \nabla_q^2 V(q_n) & I_{3N} \end{pmatrix} \implies \det(J_1) = 1
    $$
 
-2. **Sub-paso 2 (Deriva cinemática):** $\Phi_2: \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} \mapsto \begin{pmatrix} q_{n+1} \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n + \Delta t \nabla_p T(p_{n+1}) \\ p_{n+1} \end{pmatrix}$.  
+2. **Sub-paso 2 (Deriva cinemática):**
+   $$
+   \Phi_2: \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} \mapsto \begin{pmatrix} q_{n+1} \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n + \Delta t \nabla_p T(p_{n+1}) \\ p_{n+1} \end{pmatrix}
+   $$
    Su matriz Jacobiana respecto a $(q_n, p_{n+1})$ es un bloque triangular superior unipotente:
    $$
    J_2 = \begin{pmatrix} I_{3N} & \Delta t \nabla_p^2 T(p_{n+1}) \\ 0 & I_{3N} \end{pmatrix} \implies \det(J_2) = 1
