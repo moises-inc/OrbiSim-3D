@@ -10,7 +10,7 @@ En lugar de proyectar esferas poligonales con sombreado estático, **AstroDynami
 
 ### A. Resplandor Atmosférico de Rayleigh (Inverted Fresnel Glow)
 
-El efecto de dispersión atmosférica ([`AtmosphereShader.ts`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/web_ui/src/visuals/AtmosphereShader.ts)) reproduce el halo brillante en el limbo de los planetas. Se renderiza sobre una esfera escalada un $18\%$ ($R_{\text{atm}} = 1.18 R_{\text{planeta}}$) utilizando las caras posteriores (`side: THREE.BackSide`) con mezcla aditiva (`THREE.AdditiveBlending`).
+El efecto de dispersión atmosférica ([`AtmosphereShader.ts`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/web_ui/src/visuals/AtmosphereShader.ts)) reproduce el halo brillante en el limbo de los planetas. Se renderiza sobre una esfera escalada un $18\%$ ($R_{\text{atm}} = 1.18 \, R_{\text{planeta}}$) utilizando las caras posteriores (`side: THREE.BackSide`) con mezcla aditiva (`THREE.AdditiveBlending`).
 
 La transparencia y radiancia marginal dependen del ángulo entre la normal exterior de la superficie $\vec{n}$ y el rayo incidente de la cámara $\vec{v}$ (ambos vectores unitarios, $\|\vec{n}\| = \|\vec{v}\| = 1$):
 
@@ -53,6 +53,7 @@ s(\vec{r}, t) = \frac{1}{2} \left[ N_1(\vec{r}, t) + \frac{1}{2} N_2(\vec{r}, t)
 $$
 
 #### 2. Interpolación Dinámica de Plasma
+
 La mezcla del plasma fotosférico interpola el color base $\mathbf{C}_{\text{base}}$ (`#fbbf24`), el núcleo incandescente $\mathbf{C}_{\text{core}}$ (`#ffffff`) y las llamaradas cromosféricas $\mathbf{C}_{\text{flare}}$ (`#ef4444`):
 
 $$
@@ -68,6 +69,7 @@ $$
 $$
 
 #### 3. Realce del Limbo Solar (Corona Fresnel) y Emisión Total
+
 $$
 F_{\text{rim}} = 1.0 - \max(\vec{n} \cdot \vec{v}, 0.0)
 $$
@@ -103,6 +105,7 @@ $$
 $$
 
 ### A. Shaders de Partícula Estelar (Vertex & Fragment)
+
 En el *Vertex Shader*, el tamaño en pantalla se escala por la perspectiva de cámara y el parpadeo armónico individual:
 
 $$
@@ -149,6 +152,7 @@ $$
 El pipeline de post-procesamiento en [`OrbitCanvas3D.tsx`](file:///mnt/9b846436-0407-4e80-b8af-5417ffbdee8e/Astro/OrbiSim-3D/web_ui/src/components/OrbitCanvas3D.tsx) encadena `EffectComposer` con `UnrealBloomPass` y mapeo de tonos `ACESFilmicToneMapping`:
 
 ### 1. Extracción de Luminancia con Rodilla Suave (Soft-Knee Thresholding)
+
 Dada la radiancia $\mathbf{C} = (R, G, B)$ en espacio HDR, se evalúa su luminancia estándar ITU-R BT.709:
 
 $$
@@ -166,6 +170,7 @@ $$
 $$
 
 ### 2. Convolución Gaussiana 2D Separable
+
 La imagen brillante se difumina en una pirámide de resolución mediante un kernel gaussiano separable:
 
 $$
@@ -175,6 +180,7 @@ $$
 Al descomponer la convolución 2D en dos pasadas 1D contiguas (horizontal y vertical), el costo por píxel se reduce de $\mathcal{O}(K^2)$ a $\mathcal{O}(2K)$ accesos a textura.
 
 ### 3. Fusión Aditiva HDR
+
 $$
 \mathbf{C}_{\text{HDR}} = \mathbf{C}_{\text{escena}} + \beta \cdot \mathbf{C}_{\text{bloom}}
 $$
@@ -182,6 +188,7 @@ $$
 Donde $\beta \in [0.5, 3.0]$ (`bloomIntensity`, por defecto $1.2$) controla la intensidad volumétrica de halo.
 
 ### 4. Mapeo de Tonos ACES Filmic (HDR $\to$ SDR)
+
 Para comprimir la radiancia infinita $\mathbf{C}_{\text{HDR}} \in [0, \infty)$ en el rango de pantalla $[0, 1]$ sin desaturar los colores fotosféricos ni quemar el canal blanco, Three.js aplica la aproximación de Narkowicz de la curva ACES (*Academy Color Encoding System*) con exposición $E = 1.1$:
 
 $$

@@ -93,6 +93,7 @@ $$
 $$
 
 ### A. Pérdida Canónica Simpléctica ($\mathcal{L}_{\text{symplectic}}$)
+
 Penaliza el residuo del campo vectorial canónico frente a las velocidades y fuerzas reales de entrenamiento a lo largo del lote $B$:
 
 $$
@@ -102,6 +103,7 @@ $$
 Nótese que el signo positivo en $\left\| \frac{\partial H_\theta}{\partial q} + \dot{p}_k \right\|_2^2$ surge directamente de $\dot{p} = -\frac{\partial H}{\partial q} \iff \frac{\partial H}{\partial q} + \dot{p} = \mathbf{0}$.
 
 ### B. Pérdida de Conservación de Energía ($\mathcal{L}_{\text{energy}}$)
+
 Ancla el nivel de referencia de la energía y penaliza la deriva escalar respecto al valor inicial $H_{0,k}$ de cada trayectoria:
 
 $$
@@ -111,6 +113,7 @@ $$
 En la clase `SymplecticPINNLoss`, $\lambda_E = 0.01$ (`energy_weight`).
 
 ### C. Término Opcional de Momento Angular ($\mathcal{L}_{\text{angular}}$)
+
 Para arquitecturas no separables o coordenadas libres, se puede acoplar una penalización de conservación del momento angular total $\vec{L}$:
 
 $$
@@ -127,7 +130,11 @@ $$
 J^T \Omega J = \Omega
 $$
 
-Tomando determinantes en ambos miembros y utilizando $\det(\Omega) = \det \begin{pmatrix} 0 & I_{3N} \\ -I_{3N} & 0 \end{pmatrix} = 1$:
+Tomando determinantes en ambos miembros y utilizando que $\det(\Omega) = 1$ para la matriz canónica simpléctica:
+
+$$
+\det(\Omega) = \det \begin{pmatrix} 0 & I_{3N} \\ -I_{3N} & 0 \end{pmatrix} = 1
+$$
 
 $$
 \det\left(J^T \Omega J\right) = \det(\Omega) \implies (\det J)^2 \det(\Omega) = \det(\Omega) \implies (\det J)^2 = 1
@@ -155,19 +162,25 @@ $$
 Esta transformación global $\Phi: (q_n, p_n) \mapsto (q_{n+1}, p_{n+1})$ se descompone de forma exacta en dos sub-pasos elementales:
 
 1. **Sub-paso 1 (Impulso gravitatorio):**
+
    $$
    \Phi_1: \begin{pmatrix} q_n \\ p_n \end{pmatrix} \mapsto \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n \\ p_n - \Delta t \nabla_q V(q_n) \end{pmatrix}
    $$
+
    Su matriz Jacobiana respecto a $(q_n, p_n)$ es un bloque triangular inferior unipotente:
+
    $$
    J_1 = \begin{pmatrix} I_{3N} & 0 \\ -\Delta t \nabla_q^2 V(q_n) & I_{3N} \end{pmatrix} \implies \det(J_1) = 1
    $$
 
 2. **Sub-paso 2 (Deriva cinemática):**
+
    $$
    \Phi_2: \begin{pmatrix} q_n \\ p_{n+1} \end{pmatrix} \mapsto \begin{pmatrix} q_{n+1} \\ p_{n+1} \end{pmatrix} = \begin{pmatrix} q_n + \Delta t \nabla_p T(p_{n+1}) \\ p_{n+1} \end{pmatrix}
    $$
+
    Su matriz Jacobiana respecto a $(q_n, p_{n+1})$ es un bloque triangular superior unipotente:
+
    $$
    J_2 = \begin{pmatrix} I_{3N} & \Delta t \nabla_p^2 T(p_{n+1}) \\ 0 & I_{3N} \end{pmatrix} \implies \det(J_2) = 1
    $$
