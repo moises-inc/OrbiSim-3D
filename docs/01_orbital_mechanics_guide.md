@@ -60,7 +60,7 @@ y_{t+\Delta t} &= y_t + \frac{\Delta t}{6}\left(k_1 + 2k_2 + 2k_3 + k_4\right)
 \end{aligned}
 $$
 
-- **Error de Truncamiento Local:** $\mathcal{O}(\Delta t^5)$ por paso (error global $\mathcal{O}(\Delta t^4)$).
+- **Error de Truncamiento Local:** $\mathcal{O}(\Delta t^5)$ por paso (error global $$\mathcal{O}(\Delta t^4)$$).
 - **Limitación en Dinámica Orbital:** RK4 **no es simpléctico**. No conserva el volumen de fase ni la 2-forma simpléctica $\omega = dq \wedge dp$, lo que genera una deriva secular de energía a largo plazo (las órbitas decaen o se expanden artificialmente).
 
 ### B. Integrador Velocity Verlet Simpléctico (Störmer-Verlet)
@@ -104,7 +104,7 @@ $$
 \vec{L} = \sum_{i=1}^N m_i (\vec{r}_i \times \vec{v}_i) = \text{constante}
 $$
 
-### 3. Momento Lineal Total y Centro de Masas ($\vec{P}_{\text{tot}}, \vec{R}_{\text{cm}}$)
+### 3. Momento Lineal Total y Centro de Masas ($$\vec{P}_{\text{tot}}, \vec{R}_{\text{cm}}$$)
 
 Por la homogeneidad del espacio (invariancia bajo traslaciones espaciales):
 
